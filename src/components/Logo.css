@@ -1,0 +1,39 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--white);
+  transition: color 0.25s ease-in-out;
+}
+
+.logo--dark {
+  color: var(--ink-900);
+}
+
+.logo__mark {
+  flex-shrink: 0;
+}
+
+.logo__type {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.logo__word {
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.6px;
+  line-height: 0.95;
+}
+
+.logo__sub {
+  margin-top: 4px;
+  padding-left: 1px;
+  font-size: 9.5px;
+  font-weight: 700;
+  /* Tracked out so "COLLECTIVE" spans the same width as "runtime". */
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  opacity: 0.72;
+}

@@ -1,0 +1,55 @@
+import Reveal from './Reveal';
+import SectionHead from './SectionHead';
+import { GLYPHS } from '../data/glyphs';
+import { useContent } from '../content/ContentProvider';
+import { formatDate, itemKey, linkProps } from '../content/format';
+import './Insights.css';
+
+const PAD = 0.2;
+
+function PostCover({ from, to, glow, glyph }) {
+  const def = GLYPHS[glyph] ?? GLYPHS.spark;
+  return (
+    <div className="post-cover" style={{ '--from': from, '--to': to, '--glow': glow }} aria-hidden="true">
+      <svg className="post-cover__glyph" viewBox={`${-PAD} ${-PAD} ${def.w + PAD * 2} ${def.h + PAD * 2}`}>
+        {def.paths.map(({ d, closed }, i) => {
+          const points = d.map(([x, y]) => `${x},${y}`).join(' ');
+          return closed ? <polygon key={i} points={points} /> : <polyline key={i} points={points} />;
+        })}
+      </svg>
+      <span className="shard post-cover__shard" />
+    </div>
+  );
+}
+
+export default function Insights() {
+  const { insights } = useContent();
+  if (!insights.items.length) return null;
+  return (
+    <section className="section insights" id="insights" aria-labelledby="insights-title">
+      <div className="container">
+        <SectionHead
+          id="insights-title"
+          title={insights.title}
+          intro={insights.intro}
+          action={{ label: 'View all', href: '#insights' }}
+        />
+        <div className="insights__grid">
+          {insights.items.map((post, i) => (
+            <Reveal as="article" key={itemKey(post, i)} className="post-card" delay={i * 80}>
+              <a className="post-card__link" {...linkProps(post.url, '#insights')}>
+                <div className="post-card__media">
+                  <PostCover {...post.art} />
+                </div>
+                <h3 className="post-card__title">{post.title}</h3>
+                <p className="post-card__meta">
+                  <time dateTime={post.date}>{formatDate(post.date)}</time> <span aria-hidden="true">|</span> {post.tag}
+                </p>
+              </a>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

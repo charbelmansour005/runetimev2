@@ -1,0 +1,175 @@
+/* Shared primitives for the hand-built product mockups. */
+
+.m-card {
+  position: absolute;
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow:
+    0 28px 50px -12px rgba(8, 0, 30, 0.5),
+    0 2px 6px rgba(8, 0, 30, 0.18);
+  color: #17151d;
+  font-family: var(--font);
+  line-height: 1.3;
+}
+
+.m-card b {
+  display: block;
+  font-weight: 700;
+}
+
+.m-card small {
+  display: block;
+  color: #8a8797;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.m-label {
+  color: #8a8797;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.m-live {
+  color: #e11d48;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.m-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.m-pill--ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.m-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8b5cff, #4d00f2);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---------- Phone ---------- */
+
+.m-phone {
+  position: absolute;
+  width: 150px;
+  aspect-ratio: 9 / 19;
+  padding: 7px;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #2a2733, #0c0b10);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.14),
+    0 30px 50px -14px rgba(0, 0, 0, 0.55);
+}
+
+.m-phone__screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--white);
+  color: #17151d;
+  font-family: var(--font);
+  line-height: 1.25;
+}
+
+.m-phone__screen::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 6px;
+  z-index: 2;
+  width: 42px;
+  height: 12px;
+  border-radius: 999px;
+  background: #0c0b10;
+  transform: translateX(-50%);
+}
+
+/* ---------- Laptop / browser ---------- */
+
+.m-laptop {
+  position: absolute;
+  width: 270px;
+}
+
+.m-laptop__screen {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  padding: 7px;
+  border-radius: 12px 12px 4px 4px;
+  background: #121118;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.12);
+}
+
+.m-laptop__view {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--white);
+  color: #17151d;
+  font-family: var(--font);
+  line-height: 1.25;
+}
+
+.m-laptop__base {
+  height: 10px;
+  margin: 0 -18px;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, #d9d8de, #a3a2ab);
+  box-shadow: 0 24px 34px -12px rgba(0, 0, 0, 0.5);
+}
+
+.m-browser {
+  position: absolute;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow:
+    0 22px 40px -14px rgba(40, 1, 124, 0.45),
+    0 1px 3px rgba(40, 1, 124, 0.15);
+  color: #17151d;
+  font-family: var(--font);
+  line-height: 1.25;
+}
+
+.m-browser__bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 8px;
+  background: #f1eff7;
+}
+
+.m-browser__bar i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #cbc6da;
+}
+
+.m-browser__bar span {
+  flex: 1;
+  height: 7px;
+  margin-left: 8px;
+  border-radius: 4px;
+  background: var(--white);
+}

@@ -1,0 +1,306 @@
+.hero {
+  position: relative;
+  isolation: isolate;
+  height: 100vh;
+  height: 100svh;
+  min-height: 700px;
+  overflow: hidden;
+  background: var(--void);
+  color: var(--white);
+}
+
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--grad-hero);
+}
+
+.hero__wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72%;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.hero__wave canvas,
+.crystal-shard canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.hero__progress {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.hero__progress-fill {
+  display: block;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* ---------- Art: shard + 3D stone ---------- */
+
+.hero__art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 60%;
+  pointer-events: none;
+}
+
+.hero__shard-parallax {
+  position: absolute;
+  left: 6%;
+  top: 17%;
+  width: 44%;
+  aspect-ratio: 3 / 4;
+}
+
+.hero__shard,
+.hero__shard-rock {
+  position: absolute;
+  inset: 0;
+}
+
+.hero__shard-shape {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(34% 0%, 100% 13%, 100% 71%, 63% 100%, 0% 87%, 0% 25%);
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 38%),
+    linear-gradient(160deg, var(--shard-a, #f08bf5), var(--shard-b, #f7a8b8));
+  transform: rotate(-9deg);
+  transition: background 0.2s;
+}
+
+.hero__stone,
+.hero__stone-parallax,
+.hero__stone-float,
+.crystal-shard {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---------- Copy ---------- */
+
+.hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-top: var(--header-h);
+  padding-bottom: 140px;
+  pointer-events: none;
+}
+
+.hero__slides {
+  display: grid;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.hero__slide {
+  grid-area: 1 / 1;
+  align-self: center;
+}
+
+.hero__title {
+  margin-bottom: 40px;
+  color: var(--white);
+  font-size: clamp(42px, 4.8vw, 69px);
+  font-weight: 700;
+  line-height: 1.377;
+  letter-spacing: -0.058em;
+}
+
+.hero__line {
+  display: block;
+}
+
+/* ---------- Glass tab bar ---------- */
+
+.hero__tabs {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  width: min(1400px, calc(100% - 40px));
+  transform: translateX(-50%);
+  border: 1px solid var(--glass-stroke);
+  border-bottom: 0;
+  border-radius: 20px 20px 0 0;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.hero-tab {
+  position: relative;
+  display: block;
+  height: 140px;
+  padding: 20px 25px;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  font-family: var(--font);
+  text-align: left;
+  opacity: 0.65;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.hero-tab:hover,
+.hero-tab.is-active {
+  opacity: 1;
+}
+
+.hero-tab__bar {
+  position: relative;
+  display: block;
+  height: 3px;
+  margin-bottom: 15px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.hero-tab.is-active .hero-tab__bar {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hero-tab__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--violet-light);
+  box-shadow: 0 0 12px rgba(139, 92, 255, 0.9);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.hero-tab__title {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.hero-tab__text {
+  display: block;
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1200px) {
+  .hero__art {
+    width: 64%;
+  }
+
+  .hero-tab {
+    padding: 18px 20px;
+  }
+
+  .hero-tab__text {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero__art {
+    width: 100%;
+    opacity: 0.6;
+  }
+
+  .hero__shard-parallax {
+    left: 38%;
+    top: 18%;
+    width: 52%;
+  }
+
+  .hero__stone {
+    left: 30%;
+    top: 4%;
+    bottom: 22%;
+  }
+
+  .hero__content {
+    align-items: flex-end;
+    padding-bottom: 120px;
+  }
+
+  .hero__title {
+    margin-bottom: 28px;
+    font-size: clamp(38px, 8.6vw, 56px);
+    line-height: 1.16;
+    letter-spacing: -0.045em;
+  }
+
+  .hero__progress {
+    display: none;
+  }
+
+  /* The tab bar collapses into story-style progress segments. */
+  .hero__tabs {
+    bottom: 36px;
+    width: calc(100% - var(--gutter) * 2);
+    gap: 8px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .hero-tab {
+    height: 24px;
+    padding: 10px 0;
+    opacity: 1;
+  }
+
+  .hero-tab__bar,
+  .hero-tab.is-active .hero-tab__bar {
+    margin: 0;
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .hero-tab__title,
+  .hero-tab__text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero__stone {
+    left: 12%;
+  }
+
+  .hero__shard-parallax {
+    left: 30%;
+    width: 62%;
+  }
+
+  .hero__cta {
+    width: 100%;
+  }
+}

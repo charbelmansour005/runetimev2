@@ -1,0 +1,77 @@
+.constellation {
+  position: relative;
+  z-index: 1;
+  padding: 26px 22px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(100% 80% at 50% 0%, rgba(139, 92, 255, 0.25) 0%, rgba(139, 92, 255, 0) 60%),
+    linear-gradient(160deg, rgba(23, 11, 43, 0.92), rgba(12, 10, 18, 0.95));
+  box-shadow: 0 40px 70px -24px rgba(0, 0, 0, 0.7);
+}
+
+.constellation svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.constellation__orbit {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-dasharray: 3 6;
+}
+
+.constellation__orbit--inner {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.constellation__link {
+  stroke: rgba(185, 165, 245, 0.45);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 6;
+  animation: link-flow 2.8s linear infinite;
+}
+
+@keyframes link-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.constellation__core {
+  filter: drop-shadow(0 0 18px rgba(139, 92, 255, 0.8));
+}
+
+.constellation__node circle {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: rgba(255, 255, 255, 0.35);
+  stroke-width: 1.2;
+}
+
+.constellation__node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: node-pulse 3.2s ease-in-out infinite;
+}
+
+@keyframes node-pulse {
+  50% {
+    opacity: 0.65;
+  }
+}
+
+.constellation__node text {
+  fill: var(--white);
+  font-family: var(--font);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.constellation__caption {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: center;
+}

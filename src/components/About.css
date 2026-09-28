@@ -1,0 +1,46 @@
+.about__grid {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  align-items: center;
+  gap: 88px;
+}
+
+.about__copy p {
+  margin-top: 22px;
+  line-height: 1.85;
+}
+
+.about__copy strong {
+  color: var(--ink-700);
+  font-weight: 600;
+}
+
+.about__visual {
+  position: relative;
+  padding: 44px 24px 44px 36px;
+}
+
+.about__shard {
+  left: 50%;
+  top: 50%;
+  width: 70%;
+  aspect-ratio: 3 / 4;
+  transform: translate(-50%, -50%) rotate(-58deg) scaleY(1.25);
+}
+
+@media (max-width: 1024px) {
+  .about__grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .about__visual {
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 560px) {
+  .about__visual {
+    padding: 28px 8px 36px 12px;
+  }
+}
