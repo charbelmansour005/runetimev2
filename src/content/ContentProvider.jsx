@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { defaultContent } from '../data/content';
 
 const ContentContext = createContext(defaultContent);
-const TIMEOUT_MS = 4000;
+// Generous enough for a cold serverless start; the site falls back after this.
+const TIMEOUT_MS = 6000;
 
 // Anything missing from the API response falls back to the built-in defaults.
 function withDefaults(data) {

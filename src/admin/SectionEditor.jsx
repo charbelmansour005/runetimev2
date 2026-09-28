@@ -23,7 +23,7 @@ export default function SectionEditor({ section, initial, onSaved, onDirtyChange
       setSaved(data);
       setValue(data);
       onSaved(section.key, data);
-      notify('Saved — the live site is updated.');
+      notify('Saved — the live site updates within a few seconds.');
     } catch (err) {
       // API paths look like "hero.slides.1.tabTitle"; drop the section prefix.
       const fields = err.fields

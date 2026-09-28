@@ -43,6 +43,27 @@ a honeypot field and rate limiting).
 
 ## Deploying
 
+### Vercel
+
+The repo is ready for Vercel: the site is served from Vercel's CDN, and `api/index.js` runs the
+Express API as a serverless function (`vercel.json` routes every `/api/*` request to it).
+
+1. In Vercel: **Add New → Project → Import** this GitHub repo. Framework (Vite), build command and
+   output folder come from `vercel.json` — leave them as they are.
+2. Under **Environment Variables** add `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`
+   (you can paste your whole `.env` into the first *Key* field and Vercel splits it up).
+3. In MongoDB Atlas → **Network Access**, allow access from anywhere (`0.0.0.0/0`): Vercel functions
+   don't have fixed IP addresses. Keep the database user's password long and random.
+4. Deploy. The site is live at `https://<project>.vercel.app`, the CMS at `/admin`.
+
+Optional: Vercel → Settings → Functions → set the function region closest to your Atlas cluster.
+
+On Vercel, `/api/content` is cached at the edge for 10 seconds and refreshed in the background, so
+visitors never wait for a cold function and CMS saves appear within a few seconds. Rate limits are
+kept per function instance.
+
+### Any other Node host (Render, Railway, a VPS…)
+
 One Node process serves everything:
 
 ```bash
@@ -75,6 +96,7 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `src/components/` — site sections; `src/components/hero/` — slider, WebGL crystal and wave.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
+- `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config.
 
 ## Security notes
 

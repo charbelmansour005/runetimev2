@@ -1,7 +1,10 @@
+import { config } from '../config.js';
 import { SiteContent } from '../models/SiteContent.js';
 
 const INTERNAL_FIELDS = ['_id', '__v', 'key', 'createdAt'];
-const CACHE_TTL_MS = 30_000;
+// On Vercel the CDN caches /api/content instead (see routes/public.js), and a
+// save may land on a different function instance, so skip the memory cache.
+const CACHE_TTL_MS = config.isVercel ? 0 : 30_000;
 let cache = { value: null, at: 0 };
 
 export function serializeContent(doc) {
