@@ -200,7 +200,12 @@ export const SECTIONS = [
         minItems: 1,
         maxItems: 24,
         summary: (w) => w.name,
-        preview: (w) => <span className="cms-swatch" style={{ background: w.bg }} />,
+        preview: (w) =>
+          w.image ? (
+            <img className="cms-thumb" src={w.image} alt="" />
+          ) : (
+            <span className="cms-swatch" style={{ background: w.bg }} />
+          ),
         newItem: () => ({
           name: 'New project',
           excerpt: 'One sentence about what we built.',
@@ -209,6 +214,8 @@ export const SECTIONS = [
           device: 'phone',
           app: 'fintech',
           url: '',
+          image: '',
+          imageFit: 'cover',
           icon: { from: '#4D00F2', to: '#8B5CFF', mark: 'N', accent: '#FFFFFF' },
         }),
         fields: [
@@ -223,14 +230,37 @@ export const SECTIONS = [
             placeholder: 'https://… (optional)',
           },
           { name: 'excerpt', type: 'textarea', label: 'Short description', max: 200, rows: 2 },
-          { name: 'tags', type: 'tags', label: 'Tags', options: WORK_TAG_OPTIONS, width: 'third' },
-          { name: 'device', type: 'select', label: 'Device mockup', options: WORK_DEVICE_OPTIONS, width: 'third' },
-          { name: 'app', type: 'select', label: 'Screen design', options: WORK_APP_OPTIONS, width: 'third' },
-          { name: 'bg', type: 'color', label: 'Tile background', width: 'third' },
+          { name: 'tags', type: 'tags', label: 'Tags', options: WORK_TAG_OPTIONS },
+          {
+            name: 'image',
+            type: 'image',
+            label: 'Project image',
+            help: 'Optional. Shown on the tile instead of the drawn mockup. Landscape images (about 4:3) fit best.',
+          },
+          {
+            name: 'imageFit',
+            type: 'select',
+            label: 'Image fit',
+            width: 'half',
+            options: [
+              { value: 'cover', label: 'Fill the tile (edges may be cropped)' },
+              { value: 'contain', label: 'Show the whole image on the tile colour' },
+            ],
+          },
+          { name: 'bg', type: 'color', label: 'Tile background', width: 'half' },
+          {
+            name: 'device',
+            type: 'select',
+            label: 'Device mockup (no image)',
+            options: WORK_DEVICE_OPTIONS,
+            width: 'half',
+          },
+          { name: 'app', type: 'select', label: 'Screen design (no image)', options: WORK_APP_OPTIONS, width: 'half' },
           {
             name: 'icon',
             type: 'group',
-            label: 'App icon',
+            label: 'App icon (no image)',
+            help: 'Used with the drawn mockup when the project has no image.',
             fields: [
               { name: 'mark', type: 'text', label: 'Letter', max: 2, width: 'quarter' },
               { name: 'accent', type: 'color', label: 'Letter colour', width: 'quarter' },

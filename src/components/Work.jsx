@@ -49,7 +49,17 @@ export default function Work() {
             {...linkProps(item.url, '#contact')}
           >
             <div className="work-tile__art" aria-hidden="true">
-              <WorkArt item={item} />
+              {item.image ? (
+                <img
+                  className={`work-tile__img work-tile__img--${item.imageFit === 'contain' ? 'contain' : 'cover'}`}
+                  src={item.image}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : (
+                <WorkArt item={item} />
+              )}
             </div>
             <div className="work-tile__overlay">
               <h3>{item.name}</h3>

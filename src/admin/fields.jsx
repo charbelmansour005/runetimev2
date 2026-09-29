@@ -1,5 +1,7 @@
-import { useEffect, useId, useState } from 'react';
-import { IconCopy, IconDown, IconPlus, IconTrash, IconUp } from './icons';
+import { useEffect, useId, useRef, useState } from 'react';
+import { api } from './api';
+import { IconCopy, IconDown, IconImage, IconPlus, IconTrash, IconUp } from './icons';
+import { prepareImage } from './image';
 
 // Renders form controls from the field definitions in schema.jsx. Values are
 // plain objects; `path` locates each field for matching API errors.
@@ -116,6 +118,78 @@ function TagsControl({ id, field, value = [], onChange }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+// ---------- Image upload ----------
+
+function ImageControl({ id, field, value, onChange }) {
+  const inputRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [dragging, setDragging] = useState(false);
+
+  const upload = async (file) => {
+    if (!file || busy) return;
+    setError('');
+    setBusy(true);
+    try {
+      const { blob, width, height } = await prepareImage(file, { maxSize: field.maxSize });
+      const { url } = await api.uploadMedia(blob, { filename: file.name, width, height });
+      onChange(url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    upload(e.dataTransfer.files?.[0]);
+  };
+
+  return (
+    <div
+      className={`cms-image${value ? ' has-image' : ''}${dragging ? ' is-dragging' : ''}${busy ? ' is-busy' : ''}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={onDrop}
+    >
+      {value ? (
+        <img className="cms-image__preview" src={value} alt="" />
+      ) : (
+        <button type="button" className="cms-image__empty" onClick={() => inputRef.current?.click()} disabled={busy}>
+          <IconImage width={26} height={26} />
+          <span>{busy ? 'Uploading…' : 'Drop an image here, or click to choose one'}</span>
+          <small>PNG, JPG, WebP, GIF or AVIF — resized and compressed automatically</small>
+        </button>
+      )}
+      {value && (
+        <div className="cms-image__actions">
+          <button type="button" className="cms-btn" onClick={() => inputRef.current?.click()} disabled={busy}>
+            {busy ? 'Uploading…' : 'Replace'}
+          </button>
+          <button type="button" className="cms-btn cms-btn--danger" onClick={() => onChange('')} disabled={busy}>
+            Remove
+          </button>
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        id={id}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+        hidden
+        onChange={(e) => upload(e.target.files?.[0])}
+      />
+      {error && <p className="cms-error">{error}</p>}
     </div>
   );
 }
@@ -299,6 +373,7 @@ const CONTROLS = {
   select: SelectControl,
   date: DateControl,
   tags: TagsControl,
+  image: ImageControl,
   lines: LinesControl,
   group: GroupControl,
   list: ListControl,

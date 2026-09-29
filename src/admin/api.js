@@ -30,6 +30,27 @@ async function request(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+async function upload(path, blob, params) {
+  const query = new URLSearchParams(params).toString();
+  let res;
+  try {
+    res = await fetch(`/api${path}?${query}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': blob.type || 'application/octet-stream' },
+      body: blob,
+    });
+  } catch {
+    throw new Error('Can’t reach the server. Is the API running?');
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) onUnauthorized();
+    throw new Error(data.error || `Upload failed (${res.status}).`);
+  }
+  return data;
+}
+
 export const api = {
   me: () => request('/auth/me'),
   login: (email, password) => request('/auth/login', { method: 'POST', body: { email, password } }),
@@ -39,6 +60,7 @@ export const api = {
   messages: () => request('/admin/messages'),
   setRead: (id, read) => request(`/admin/messages/${id}`, { method: 'PATCH', body: { read } }),
   deleteMessage: (id) => request(`/admin/messages/${id}`, { method: 'DELETE' }),
+  uploadMedia: (blob, { filename, width, height }) => upload('/admin/media', blob, { filename, width, height }),
   changePassword: (currentPassword, newPassword) =>
     request('/admin/account/password', { method: 'PUT', body: { currentPassword, newPassword } }),
 };

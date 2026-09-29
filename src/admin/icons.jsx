@@ -62,6 +62,13 @@ export const IconMail = (p) => (
     <path d="m3 7 9 6 9-6" />
   </svg>
 );
+export const IconImage = (p) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="9" cy="10" r="2" />
+    <path d="m21 16-5-5-9 9" />
+  </svg>
+);
 export const IconRefresh = (p) => (
   <svg {...base} {...p}>
     <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />

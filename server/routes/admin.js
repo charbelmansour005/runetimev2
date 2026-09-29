@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { invalidateContentCache, serializeContent } from '../lib/content.js';
+import { Media, mediaUrl, sniffImageType } from '../models/Media.js';
 import { Message } from '../models/Message.js';
 import { SECTION_KEYS, SiteContent } from '../models/SiteContent.js';
 import { requireAuth, startSession } from '../middleware/auth.js';
@@ -33,6 +34,29 @@ router.put('/content/:section', async (req, res) => {
 
   const saved = serializeContent(doc);
   return res.json({ section, data: saved[section], updatedAt: saved.updatedAt, updatedBy: saved.updatedBy });
+});
+
+// ---------- Image uploads ----------
+
+// The CMS sends the (already compressed) image as the raw request body.
+// Vercel caps request bodies at 4.5 MB, so stay under that everywhere.
+router.post('/media', express.raw({ type: 'image/*', limit: '4mb' }), async (req, res) => {
+  const data = Buffer.isBuffer(req.body) ? req.body : null;
+  if (!data?.length) return res.status(400).json({ error: 'Send the image file as the request body.' });
+  const contentType = sniffImageType(data);
+  if (!contentType) return res.status(415).json({ error: 'Use a PNG, JPG, WebP, GIF or AVIF image.' });
+
+  const dimension = (v) => Math.max(0, Math.min(20000, Math.round(Number(v) || 0)));
+  const media = await Media.create({
+    filename: String(req.query.filename ?? '').slice(0, 200),
+    contentType,
+    size: data.length,
+    width: dimension(req.query.width),
+    height: dimension(req.query.height),
+    data,
+    uploadedBy: req.user.email,
+  });
+  return res.status(201).json({ url: mediaUrl(media.id), width: media.width, height: media.height, size: media.size });
 });
 
 // ---------- Contact form inbox ----------

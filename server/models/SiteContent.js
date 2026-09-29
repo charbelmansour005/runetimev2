@@ -10,6 +10,7 @@ import {
   WORK_TAG_OPTIONS,
   optionValues,
 } from '../../src/data/options.js';
+import { MEDIA_URL_PATTERN } from './Media.js';
 import { EMAIL_PATTERN } from './Message.js';
 
 const { Schema } = mongoose;
@@ -44,6 +45,17 @@ const link = {
   validate: {
     validator: (v) => !v || /^(https?:\/\/|mailto:|\/|#)/i.test(v),
     message: 'Links must start with https://, mailto:, / or #',
+  },
+};
+
+// An image uploaded through the CMS (served from /api/media/<id>), or empty.
+const image = {
+  type: String,
+  trim: true,
+  default: '',
+  validate: {
+    validator: (v) => !v || MEDIA_URL_PATTERN.test(v),
+    message: 'Upload the image through the CMS',
   },
 };
 
@@ -113,6 +125,9 @@ const workSchema = new Schema({
   device: oneOf(WORK_DEVICE_OPTIONS),
   app: oneOf(WORK_APP_OPTIONS),
   url: link,
+  // When set, the tile shows this image instead of the drawn device mockup.
+  image,
+  imageFit: { type: String, enum: ['cover', 'contain'], default: 'cover' },
   icon: section({ from: color, to: color, mark: text(2), accent: color }),
 });
 
