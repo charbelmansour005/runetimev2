@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {
   GLYPH_OPTIONS,
+  HERO_SHAPE_OPTIONS,
   INDUSTRY_VISUAL_OPTIONS,
   SERVICE_ICON_OPTIONS,
   SOCIAL_ICON_OPTIONS,
@@ -89,10 +90,10 @@ const slideSchema = new Schema({
   headline: lines({ min: 1, max: 5, maxLength: 40, label: 'headline lines' }),
   tabTitle: text(40),
   tabText: text(90),
-  glyph: oneOf(GLYPH_OPTIONS),
+  shape: oneOf(HERO_SHAPE_OPTIONS),
+  from: color,
+  to: color,
   glow: color,
-  shardFrom: color,
-  shardTo: color,
 });
 
 const serviceSchema = new Schema({

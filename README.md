@@ -32,7 +32,7 @@ Requires Node 18+. (Vite 6, Mongoose 8 and concurrently 9 are pinned for Node 18
 
 ## The CMS
 
-Every section of the page is editable: hero slides (headline, tab text, crystal symbol and colours),
+Every section of the page is editable: hero slides (headline, tab text, particle shape and colours),
 About, Services, Industries, Solutions, Selected work, Tech stack, Numbers, Insights, Contact,
 brand/social links and SEO. Lists can be reordered, duplicated and removed; changes go live as
 soon as you press **Save** (or ⌘/Ctrl + S). Invalid input is rejected by the API with a message
@@ -93,7 +93,7 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 
 - `src/data/content.js` — default content (also seeds the database). `src/data/options.js` — choices offered by the CMS.
 - `src/content/` — loads content from the API for the site.
-- `src/components/` — site sections; `src/components/hero/` — slider, WebGL crystal and wave.
+- `src/components/` — site sections; `src/components/hero/` — slider, WebGL particle sculpture (`shapes.js` defines the formations) and wave.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
 - `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config.

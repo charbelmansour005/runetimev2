@@ -6,7 +6,7 @@ import { itemKey } from '../../content/format';
 import './Hero.css';
 
 // three.js is heavy, so the WebGL layers load after the copy has painted.
-const CrystalShard = lazy(() => import('./CrystalShard'));
+const ParticleSculpture = lazy(() => import('./ParticleSculpture'));
 const WaveCanvas = lazy(() => import('./WaveCanvas'));
 
 gsap.registerPlugin(ScrollTrigger);
@@ -16,7 +16,7 @@ const SLIDE_SECONDS = 8;
 export default function Hero() {
   const { slides } = useContent().hero;
   const rootRef = useRef(null);
-  const stoneApi = useRef(null);
+  const sculptureApi = useRef(null);
   const activeRef = useRef(0);
   const goRef = useRef(() => {});
   const [active, setActive] = useState(0);
@@ -31,9 +31,7 @@ export default function Hero() {
       const slideEls = q('.hero__slide');
       const titles = q('.hero__title');
       const ctas = q('.hero__cta');
-      const [stone] = q('.hero__stone');
-      const [shard] = q('.hero__shard');
-      const [shardShape] = q('.hero__shard-shape');
+      const [glow] = q('.hero__glow');
       const [progress] = q('.hero__progress-fill');
       const fills = q('.hero-tab__fill');
 
@@ -43,16 +41,12 @@ export default function Hero() {
       let progressTween;
 
       gsap.set(slideEls, { autoAlpha: 0 });
-      gsap.set(stone, { xPercent: -160 });
-      gsap.set(shard, { scale: 0 });
 
-      const paint = (i) => {
-        const s = slides[i];
-        shardShape.style.setProperty('--shard-a', s.shardFrom);
-        shardShape.style.setProperty('--shard-b', s.shardTo);
+      // The particles start re-forming as soon as a slide is chosen.
+      const reshape = (i) => {
         activeRef.current = i;
-        stoneApi.current?.setSlide(i);
-        setActive(i);
+        sculptureApi.current?.setSlide(i);
+        gsap.to(glow, { '--glow': slides[i].glow, duration: reduced ? 0 : 1.4, ease: 'power2.inOut' });
       };
 
       const schedule = (i) => {
@@ -61,8 +55,8 @@ export default function Hero() {
         autoplay = gsap.delayedCall(SLIDE_SECONDS, () => go((i + 1) % slides.length));
       };
 
-      // Text leaves left while the art leaves right, then the next slide
-      // crosses back the other way — the reference's "scissor" transition.
+      // The headline leaves left and the next one sweeps in from the right
+      // while the particles burst apart and build the next shape.
       function go(next) {
         if (busy || next === current) return;
         busy = true;
@@ -80,57 +74,47 @@ export default function Hero() {
           },
         });
 
+        tl.add(() => reshape(next), 0);
+
         if (reduced) {
           if (prev >= 0) tl.to(slideEls[prev], { autoAlpha: 0, duration: 0.3 });
-          tl.add(() => paint(next))
-            .set(stone, { xPercent: 0 })
-            .set(shard, { scale: 1 })
-            .to(slideEls[next], { autoAlpha: 1, duration: 0.4 });
+          tl.add(() => setActive(next)).to(slideEls[next], { autoAlpha: 1, duration: 0.4 });
           return;
         }
 
         if (prev >= 0) {
           tl.to(titles[prev], { x: -vw, duration: 0.8 }, 0)
             .to(ctas[prev], { x: -vw, duration: 0.6 }, 0)
-            .to(stone, { xPercent: 115, duration: 0.8 }, 0)
-            .to(shard, { x: -vw * 0.45, scale: 0, duration: 0.8 }, 0)
             .set(slideEls[prev], { autoAlpha: 0 });
         }
 
-        tl.add(() => paint(next))
+        tl.add(() => setActive(next))
           .set(slideEls[next], { autoAlpha: 1 })
           .fromTo(titles[next], { x: vw * 0.55, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.95 })
-          .fromTo(ctas[next], { x: vw * 0.55, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.95 }, '<0.08')
-          .fromTo(stone, { xPercent: -160 }, { xPercent: 0, duration: 1 }, '<-0.08')
-          .fromTo(shard, { x: vw * 0.35, scale: 0, rotation: 90 }, { x: 0, scale: 1, rotation: 0, duration: 1 }, '<');
+          .fromTo(ctas[next], { x: vw * 0.55, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.95 }, '<0.08');
       }
       goRef.current = go;
 
       if (!reduced) {
-        // Idle drift of the stone, slow rocking of the shard.
-        gsap.fromTo(q('.hero__stone-float'), { x: -10 }, { x: 10, duration: 3, ease: 'sine.inOut', yoyo: true, repeat: -1 });
-        gsap.fromTo(q('.hero__shard-rock'), { rotation: 0 }, { rotation: -10, duration: 4.5, ease: 'none', yoyo: true, repeat: -1 });
+        // Scroll parallax: the sculpture lags behind as the hero leaves.
+        const parallax = q('.hero__sculpture');
+        gsap.to(parallax, {
+          yPercent: 14,
+          ease: 'none',
+          scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: true },
+        });
 
-        // Scroll parallax: stone and shard drift apart as the hero leaves.
-        const scrub = { trigger: root, start: 'top top', end: 'bottom top', scrub: true };
-        gsap.to(q('.hero__stone-parallax'), { yPercent: 14, ease: 'none', scrollTrigger: scrub });
-        gsap.to(q('.hero__shard-parallax'), { yPercent: -12, ease: 'none', scrollTrigger: { ...scrub } });
-
-        // Mouse parallax: stone follows the cursor, shard moves against it.
-        const stoneX = gsap.quickTo(q('.hero__stone-parallax'), 'x', { duration: 0.9, ease: 'power3.out' });
-        const shardX = gsap.quickTo(q('.hero__shard-parallax'), 'x', { duration: 0.9, ease: 'power3.out' });
+        // Mouse parallax: the sculpture drifts and turns towards the cursor,
+        // and its particles part around it.
+        const artX = gsap.quickTo(parallax, 'x', { duration: 0.9, ease: 'power3.out' });
         const onMove = (e) => {
           if (e.pointerType === 'touch') return;
-          const nx = e.clientX / window.innerWidth - 0.5;
-          const ny = e.clientY / window.innerHeight - 0.5;
-          stoneX(nx * 36);
-          shardX(-nx * 36);
-          stoneApi.current?.setPointer(nx, ny);
+          artX((e.clientX / window.innerWidth - 0.5) * 30);
+          sculptureApi.current?.setPointer(e.clientX, e.clientY);
         };
         const onLeave = () => {
-          stoneX(0);
-          shardX(0);
-          stoneApi.current?.setPointer(0, 0);
+          artX(0);
+          sculptureApi.current?.setPointer(null);
         };
         root.addEventListener('pointermove', onMove);
         root.addEventListener('pointerleave', onLeave);
@@ -182,21 +166,11 @@ export default function Hero() {
       </div>
 
       <div className="hero__art" aria-hidden="true">
-        <div className="hero__shard-parallax">
-          <div className="hero__shard">
-            <div className="hero__shard-rock">
-              <span className="hero__shard-shape" />
-            </div>
-          </div>
-        </div>
-        <div className="hero__stone">
-          <div className="hero__stone-parallax">
-            <div className="hero__stone-float">
-              <Suspense fallback={null}>
-                <CrystalShard apiRef={stoneApi} activeRef={activeRef} slides={slides} />
-              </Suspense>
-            </div>
-          </div>
+        <div className="hero__sculpture">
+          <div className="hero__glow" />
+          <Suspense fallback={null}>
+            <ParticleSculpture apiRef={sculptureApi} activeRef={activeRef} slides={slides} />
+          </Suspense>
         </div>
       </div>
 

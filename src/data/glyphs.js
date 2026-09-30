@@ -1,5 +1,5 @@
-// Angular code glyphs drawn as glowing strokes on the hero crystal and the
-// insight covers. Points are in a w × h box (x → right, y → down).
+// Angular code glyphs drawn as glowing strokes on the insight covers.
+// Points are in a w × h box (x → right, y → down).
 // ✦ spark (AI) · </> code (apps) · { } braces (teams) · >_ prompt (cloud & DevOps)
 export const GLYPHS = {
   spark: {

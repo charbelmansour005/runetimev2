@@ -21,45 +21,46 @@ export const defaultContent = {
     ],
   },
 
-  // `glyph` is the code symbol glowing on the 3D crystal; `shardFrom`/`shardTo`
-  // colour the angular shape behind it; `glow` tints the crystal's light.
+  // `shape` is what the hero's particles form on each slide (see
+  // HERO_SHAPE_OPTIONS); `from`/`to` colour them top to bottom and `glow`
+  // tints the light behind them.
   hero: {
     slides: [
       {
         headline: ['Software & AI', 'Engineering,', 'Built to Run'],
         tabTitle: 'AI & Machine Learning',
         tabText: 'Shipping intelligent features into real products',
-        glyph: 'spark',
+        shape: 'neural',
         glow: '#E36BFF',
-        shardFrom: '#F08BF5',
-        shardTo: '#F7A8B8',
+        from: '#F08BF5',
+        to: '#F7A8B8',
       },
       {
         headline: ['Custom Mobile', '& Web App', 'Development'],
         tabTitle: 'Web & Mobile Apps',
         tabText: 'Native, cross-platform and web apps built to scale',
-        glyph: 'code',
+        shape: 'screens',
         glow: '#8B6BFF',
-        shardFrom: '#C7B8FA',
-        shardTo: '#7C6CF0',
+        from: '#C7B8FA',
+        to: '#7C6CF0',
       },
       {
         headline: ['Dedicated', 'Engineering', 'Teams for', 'Global Clients'],
         tabTitle: 'Dedicated Teams',
         tabText: 'A senior collective that plugs into your roadmap',
-        glyph: 'braces',
+        shape: 'globe',
         glow: '#5AB8FF',
-        shardFrom: '#A8C8F5',
-        shardTo: '#7EE0F0',
+        from: '#A8C8F5',
+        to: '#7EE0F0',
       },
       {
         headline: ['Cloud & DevOps', 'Platforms That', 'Never Sleep'],
         tabTitle: 'Cloud & DevOps',
         tabText: 'Infrastructure that keeps your runtime up',
-        glyph: 'prompt',
+        shape: 'infinity',
         glow: '#2EE6C8',
-        shardFrom: '#7DD3FC',
-        shardTo: '#2DD4BF',
+        from: '#7DD3FC',
+        to: '#2DD4BF',
       },
     ],
   },

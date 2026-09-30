@@ -27,7 +27,7 @@
 }
 
 .hero__wave canvas,
-.crystal-shard canvas {
+.particle-sculpture canvas {
   width: 100%;
   height: 100%;
 }
@@ -48,7 +48,7 @@
   transform-origin: left center;
 }
 
-/* ---------- Art: shard + 3D stone ---------- */
+/* ---------- Art: particle sculpture ---------- */
 
 .hero__art {
   position: absolute;
@@ -59,37 +59,28 @@
   pointer-events: none;
 }
 
-.hero__shard-parallax {
-  position: absolute;
-  left: 6%;
-  top: 17%;
-  width: 44%;
-  aspect-ratio: 3 / 4;
-}
-
-.hero__shard,
-.hero__shard-rock {
+.hero__sculpture,
+.particle-sculpture {
   position: absolute;
   inset: 0;
 }
 
-.hero__shard-shape {
+/* Soft light behind the particles, tinted per slide. */
+.hero__glow {
+  --glow: #8b6bff;
   position: absolute;
-  inset: 0;
-  clip-path: polygon(34% 0%, 100% 13%, 100% 71%, 63% 100%, 0% 87%, 0% 25%);
-  background:
-    linear-gradient(115deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 38%),
-    linear-gradient(160deg, var(--shard-a, #f08bf5), var(--shard-b, #f7a8b8));
-  transform: rotate(-9deg);
-  transition: background 0.2s;
-}
-
-.hero__stone,
-.hero__stone-parallax,
-.hero__stone-float,
-.crystal-shard {
-  position: absolute;
-  inset: 0;
+  left: 50%;
+  top: 47%;
+  width: min(80%, 84vh);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--glow) 26%, transparent),
+    color-mix(in srgb, var(--glow) 8%, transparent) 55%,
+    transparent
+  );
 }
 
 /* ---------- Copy ---------- */
@@ -224,19 +215,12 @@
 @media (max-width: 900px) {
   .hero__art {
     width: 100%;
-    opacity: 0.6;
   }
 
-  .hero__shard-parallax {
-    left: 38%;
-    top: 18%;
-    width: 52%;
-  }
-
-  .hero__stone {
-    left: 30%;
-    top: 4%;
-    bottom: 22%;
+  /* The sculpture sits above the headline, which moves to the bottom. */
+  .hero__sculpture {
+    top: calc(var(--header-h) - 12px);
+    bottom: 40%;
   }
 
   .hero__content {
@@ -291,15 +275,6 @@
 }
 
 @media (max-width: 480px) {
-  .hero__stone {
-    left: 12%;
-  }
-
-  .hero__shard-parallax {
-    left: 30%;
-    width: 62%;
-  }
-
   .hero__cta {
     width: 100%;
   }

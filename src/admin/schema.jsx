@@ -1,5 +1,6 @@
 import {
   GLYPH_OPTIONS,
+  HERO_SHAPE_OPTIONS,
   INDUSTRY_VISUAL_OPTIONS,
   SERVICE_ICON_OPTIONS,
   SOCIAL_ICON_OPTIONS,
@@ -39,7 +40,7 @@ export const SECTIONS = [
     group: 'Home page',
     label: 'Hero slider',
     description:
-      'The rotating slides at the top of the page. Each slide has a headline, a tab in the bar at the bottom, and colours for the 3D crystal and the shape behind it.',
+      'The rotating slides at the top of the page. Each slide has a headline, a tab in the bar at the bottom, and the shape its particles form, with colours.',
     fields: [
       {
         name: 'slides',
@@ -49,22 +50,22 @@ export const SECTIONS = [
         minItems: 1,
         maxItems: 6,
         summary: (s) => s.headline?.filter(Boolean).join(' '),
-        preview: (s) => gradientSwatch(s.shardFrom, s.shardTo),
+        preview: (s) => gradientSwatch(s.from, s.to),
         newItem: () => ({
           headline: ['New headline'],
           tabTitle: 'New tab',
           tabText: 'One line describing this slide',
-          glyph: 'spark',
+          shape: 'globe',
           glow: '#8B6BFF',
-          shardFrom: '#C7B8FA',
-          shardTo: '#7C6CF0',
+          from: '#C7B8FA',
+          to: '#7C6CF0',
         }),
         fields: [
           {
             name: 'headline',
             type: 'lines',
             label: 'Headline',
-            help: 'Each line sits on its own row. Keep lines to about 16 characters so they fit next to the crystal.',
+            help: 'Each line sits on its own row. Keep lines to about 16 characters so they fit next to the artwork.',
             minItems: 1,
             maxItems: 5,
             maxLength: 40,
@@ -72,10 +73,10 @@ export const SECTIONS = [
           },
           { name: 'tabTitle', type: 'text', label: 'Tab title', max: 40, width: 'half' },
           { name: 'tabText', type: 'text', label: 'Tab text', max: 90, width: 'half' },
-          { name: 'glyph', type: 'select', label: 'Crystal symbol', options: GLYPH_OPTIONS, width: 'quarter' },
-          { name: 'glow', type: 'color', label: 'Crystal glow', width: 'quarter' },
-          { name: 'shardFrom', type: 'color', label: 'Shape colour (top)', width: 'quarter' },
-          { name: 'shardTo', type: 'color', label: 'Shape colour (bottom)', width: 'quarter' },
+          { name: 'shape', type: 'select', label: 'Particle shape', options: HERO_SHAPE_OPTIONS, width: 'half' },
+          { name: 'from', type: 'color', label: 'Particle colour (top)', width: 'third' },
+          { name: 'to', type: 'color', label: 'Particle colour (bottom)', width: 'third' },
+          { name: 'glow', type: 'color', label: 'Glow behind', width: 'third' },
         ],
       },
     ],
