@@ -170,7 +170,7 @@ export const defaultContent = {
         app: 'fintech',
         url: '',
         image: '',
-        imageFit: 'cover',
+        imageFit: 'screen',
         icon: { from: '#10233F', to: '#1E3A64', mark: 'L', accent: '#C6F432' },
       },
       {
@@ -182,7 +182,7 @@ export const defaultContent = {
         app: 'health',
         url: '',
         image: '',
-        imageFit: 'cover',
+        imageFit: 'screen',
         icon: { from: '#E11D48', to: '#FB7185', mark: 'C', accent: '#FFFFFF' },
       },
       {
@@ -194,7 +194,7 @@ export const defaultContent = {
         app: 'commerce',
         url: '',
         image: '',
-        imageFit: 'cover',
+        imageFit: 'screen',
         icon: { from: '#F97316', to: '#FDBA74', mark: 'N', accent: '#FFFFFF' },
       },
       {
@@ -206,7 +206,7 @@ export const defaultContent = {
         app: 'logistics',
         url: '',
         image: '',
-        imageFit: 'cover',
+        imageFit: 'screen',
         icon: { from: '#3730A3', to: '#6366F1', mark: 'A', accent: '#FFFFFF' },
       },
     ],

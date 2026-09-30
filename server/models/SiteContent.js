@@ -126,9 +126,14 @@ const workSchema = new Schema({
   device: oneOf(WORK_DEVICE_OPTIONS),
   app: oneOf(WORK_APP_OPTIONS),
   url: link,
-  // When set, the tile shows this image instead of the drawn device mockup.
+  // An uploaded screenshot shown on the device's screen ('screen'), or an
+  // image that replaces the mockup and fills the tile ('cover'/'contain').
   image,
-  imageFit: { type: String, enum: ['cover', 'contain'], default: 'cover' },
+  imageFit: {
+    type: String,
+    enum: { values: ['screen', 'cover', 'contain'], message: '"{VALUE}" isn’t one of the available options' },
+    default: 'screen',
+  },
   icon: section({ from: color, to: color, mark: text(2), accent: color }),
 });
 

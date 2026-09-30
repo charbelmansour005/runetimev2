@@ -105,24 +105,26 @@ function AppIcon({ from, to, mark, accent }) {
   );
 }
 
-export default function WorkArt({ item }) {
+// A device with either an uploaded screenshot or a drawn app screen on it.
+export default function WorkArt({ item, screenshot }) {
   const Screen = SCREENS[item.app] ?? FintechScreen;
+  const screen = screenshot ? (
+    <img className="work-art__shot" src={screenshot} alt="" loading="lazy" decoding="async" />
+  ) : (
+    <Screen />
+  );
   return (
     <div className={`work-art work-art--${item.device}`}>
       {item.device === 'laptop' ? (
         <div className="m-laptop work-art__device">
           <div className="m-laptop__screen">
-            <div className="m-laptop__view">
-              <Screen />
-            </div>
+            <div className="m-laptop__view">{screen}</div>
           </div>
           <div className="m-laptop__base" />
         </div>
       ) : (
         <div className="m-phone work-art__device">
-          <div className="m-phone__screen">
-            <Screen />
-          </div>
+          <div className="m-phone__screen">{screen}</div>
         </div>
       )}
       <AppIcon {...item.icon} />

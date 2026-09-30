@@ -21,6 +21,14 @@
   transform: rotate(-6deg);
 }
 
+/* An uploaded screenshot fills the screen, top first (status bar under the notch). */
+.work-art__shot {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
 /* Glossy "3D" app icon floating beside the device */
 .work-icon {
   position: absolute;

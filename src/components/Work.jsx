@@ -49,16 +49,16 @@ export default function Work() {
             {...linkProps(item.url, '#contact')}
           >
             <div className="work-tile__art" aria-hidden="true">
-              {item.image ? (
+              {item.image && (item.imageFit === 'cover' || item.imageFit === 'contain') ? (
                 <img
-                  className={`work-tile__img work-tile__img--${item.imageFit === 'contain' ? 'contain' : 'cover'}`}
+                  className={`work-tile__img work-tile__img--${item.imageFit}`}
                   src={item.image}
                   alt=""
                   loading="lazy"
                   decoding="async"
                 />
               ) : (
-                <WorkArt item={item} />
+                <WorkArt item={item} screenshot={item.image || undefined} />
               )}
             </div>
             <div className="work-tile__overlay">
