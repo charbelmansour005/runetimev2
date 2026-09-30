@@ -4,21 +4,25 @@ import { Arrow, Caret } from './Icons';
 import { useContent } from '../content/ContentProvider';
 import './Header.css';
 
+// Section links point at the home page, so they also work from /insights.
 const NAV = [
-  { label: 'Services', href: '#services', menu: 'services' },
-  { label: 'Solutions', href: '#solutions', menu: 'solutions' },
-  { label: 'Industries', href: '#industries', menu: 'industries' },
-  { label: 'Work', href: '#work' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Services', href: '/#services', menu: 'services' },
+  { label: 'Solutions', href: '/#solutions', menu: 'solutions' },
+  { label: 'Industries', href: '/#industries', menu: 'industries' },
+  { label: 'Work', href: '/#work' },
+  { label: 'Insights', href: '/insights' },
+  { label: 'Contact', href: '/#contact' },
 ];
+
+const currentPath = () => window.location.pathname.replace(/\/+$/, '') || '/';
 
 // Dropdown links and promos come from the matching CMS sections.
 function useMenus() {
   const { services, solutions, industries } = useContent();
   return {
-    services: { items: services.items.map((s) => ({ label: s.title, href: '#services' })), promo: services.menuPromo },
-    solutions: { items: solutions.items.map((s) => ({ label: s.title, href: '#solutions' })), promo: solutions.menuPromo },
-    industries: { items: industries.items.map((i) => ({ label: i.name, href: '#industries' })), promo: industries.menuPromo },
+    services: { items: services.items.map((s) => ({ label: s.title, href: '/#services' })), promo: services.menuPromo },
+    solutions: { items: solutions.items.map((s) => ({ label: s.title, href: '/#solutions' })), promo: solutions.menuPromo },
+    industries: { items: industries.items.map((i) => ({ label: i.name, href: '/#industries' })), promo: industries.menuPromo },
   };
 }
 
@@ -39,7 +43,7 @@ function MegaMenu({ menu }) {
         <div className="mega__promo">
           <p className="mega__promo-title">{menu.promo.title}</p>
           <p className="mega__promo-text">{menu.promo.text}</p>
-          <a className="btn btn--accent" href="#contact">
+          <a className="btn btn--accent" href="/#contact">
             Start a project <Arrow />
           </a>
         </div>
@@ -80,14 +84,20 @@ function MobileMenu({ open, onClose, menus }) {
                 </ul>
               </>
             ) : (
-              <a className="mobile-menu__link" href={item.href} onClick={onClose} tabIndex={open ? 0 : -1}>
+              <a
+                className="mobile-menu__link"
+                href={item.href}
+                onClick={onClose}
+                tabIndex={open ? 0 : -1}
+                aria-current={item.href === currentPath() ? 'page' : undefined}
+              >
                 {item.label}
               </a>
             )}
           </li>
         ))}
       </ul>
-      <a className="btn btn--primary mobile-menu__cta" href="#contact" onClick={onClose} tabIndex={open ? 0 : -1}>
+      <a className="btn btn--primary mobile-menu__cta" href="/#contact" onClick={onClose} tabIndex={open ? 0 : -1}>
         Get in touch
       </a>
       <a className="mobile-menu__mail" href={`mailto:${brand.email}`} tabIndex={open ? 0 : -1}>
@@ -128,7 +138,7 @@ export default function Header() {
   return (
     <header className={`header${solid ? ' is-scrolled' : ''}${menuOpen ? ' is-menu-open' : ''}`}>
       <div className="header__inner container">
-        <a href="#top" className="header__logo" aria-label={`${brand.name} — back to top`}>
+        <a href="/#top" className="header__logo" aria-label={`${brand.name} — home`}>
           <Logo tone={solid ? 'dark' : 'light'} />
         </a>
 
@@ -136,7 +146,7 @@ export default function Header() {
           <ul className="nav__list">
             {NAV.map((item) => (
               <li key={item.label} className={`nav__item${item.menu ? ' has-menu' : ''}`}>
-                <a className="nav__link" href={item.href}>
+                <a className="nav__link" href={item.href} aria-current={item.href === currentPath() ? 'page' : undefined}>
                   {item.label}
                   {item.menu && <Caret className="nav__caret" />}
                 </a>

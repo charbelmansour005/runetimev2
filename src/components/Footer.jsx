@@ -4,18 +4,18 @@ import { useContent } from '../content/ContentProvider';
 import './Footer.css';
 
 const PRIMARY_LINKS = [
-  { label: 'Home', href: '#top' },
-  { label: 'Work', href: '#work' },
-  { label: 'Careers', href: '#' },
-  { label: 'Contact', href: '#contact' },
+  { label: 'Home', href: '/' },
+  { label: 'Work', href: '/#work' },
+  { label: 'Insights', href: '/insights' },
+  { label: 'Contact', href: '/#contact' },
 ];
 
 export default function Footer() {
   const { brand, services, solutions, industries } = useContent();
   const columns = [
-    { title: 'Services', href: '#services', links: services.items.map((s) => s.title) },
-    { title: 'Solutions', href: '#solutions', links: solutions.items.map((s) => s.title) },
-    { title: 'Industries', href: '#industries', links: industries.items.map((i) => i.name) },
+    { title: 'Services', href: '/#services', links: services.items.map((s) => s.title) },
+    { title: 'Solutions', href: '/#solutions', links: solutions.items.map((s) => s.title) },
+    { title: 'Industries', href: '/#industries', links: industries.items.map((i) => i.name) },
   ];
   return (
     <footer className="footer">

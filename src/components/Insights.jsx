@@ -6,6 +6,10 @@ import { formatDate, itemKey, linkProps } from '../content/format';
 import './Insights.css';
 
 const PAD = 0.2;
+// The home page shows the newest few; /insights lists them all.
+const HOME_COUNT = 4;
+
+export const newestFirst = (items) => [...items].sort((a, b) => b.date.localeCompare(a.date));
 
 function PostCover({ from, to, glow, glyph }) {
   const def = GLYPHS[glyph] ?? GLYPHS.spark;
@@ -22,6 +26,32 @@ function PostCover({ from, to, glow, glyph }) {
   );
 }
 
+// Articles without a link are listed but not clickable.
+export function PostCard({ post, delay = 0 }) {
+  const content = (
+    <>
+      <div className="post-card__media">
+        <PostCover {...post.art} />
+      </div>
+      <h3 className="post-card__title">{post.title}</h3>
+      <p className="post-card__meta">
+        <time dateTime={post.date}>{formatDate(post.date)}</time> <span aria-hidden="true">|</span> {post.tag}
+      </p>
+    </>
+  );
+  return (
+    <Reveal as="article" className={`post-card${post.url ? ' is-linked' : ''}`} delay={delay}>
+      {post.url ? (
+        <a className="post-card__link" {...linkProps(post.url)}>
+          {content}
+        </a>
+      ) : (
+        <div className="post-card__link">{content}</div>
+      )}
+    </Reveal>
+  );
+}
+
 export default function Insights() {
   const { insights } = useContent();
   if (!insights.items.length) return null;
@@ -32,22 +62,14 @@ export default function Insights() {
           id="insights-title"
           title={insights.title}
           intro={insights.intro}
-          action={{ label: 'View all', href: '#insights' }}
+          action={{ label: 'View all', href: '/insights' }}
         />
         <div className="insights__grid">
-          {insights.items.map((post, i) => (
-            <Reveal as="article" key={itemKey(post, i)} className="post-card" delay={i * 80}>
-              <a className="post-card__link" {...linkProps(post.url, '#insights')}>
-                <div className="post-card__media">
-                  <PostCover {...post.art} />
-                </div>
-                <h3 className="post-card__title">{post.title}</h3>
-                <p className="post-card__meta">
-                  <time dateTime={post.date}>{formatDate(post.date)}</time> <span aria-hidden="true">|</span> {post.tag}
-                </p>
-              </a>
-            </Reveal>
-          ))}
+          {newestFirst(insights.items)
+            .slice(0, HOME_COUNT)
+            .map((post, i) => (
+              <PostCard key={itemKey(post, i)} post={post} delay={i * 80} />
+            ))}
         </div>
       </div>
     </section>

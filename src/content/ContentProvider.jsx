@@ -21,12 +21,6 @@ function withDefaults(data) {
   );
 }
 //hi
-function applySeo({ title, description }) {
-  if (title) document.title = title;
-  const meta = document.querySelector('meta[name="description"]');
-  if (meta && description) meta.setAttribute("content", description);
-}
-
 // Loads the CMS content before rendering the site, so the hero animation is
 // built once with the final slides. The dark boot screen matches the hero.
 export function ContentProvider({ children }) {
@@ -52,10 +46,6 @@ export function ContentProvider({ children }) {
       clearTimeout(timer);
     };
   }, []);
-
-  useEffect(() => {
-    if (content) applySeo(content.seo);
-  }, [content]);
 
   if (!content)
     return <div className="boot" aria-busy="true" aria-label="Loading" />;

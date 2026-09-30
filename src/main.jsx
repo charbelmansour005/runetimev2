@@ -8,7 +8,10 @@ import { ContentProvider } from './content/ContentProvider.jsx';
 
 // The CMS lives at /admin and is only downloaded when someone opens it.
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
+const InsightsPage = lazy(() => import('./pages/InsightsPage.jsx'));
 const isAdmin = /^\/admin(\/|$)/.test(window.location.pathname);
+const path = window.location.pathname.replace(/\/+$/, '') || '/';
+const Page = path === '/insights' ? InsightsPage : App;
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -18,7 +21,9 @@ createRoot(document.getElementById('root')).render(
       </Suspense>
     ) : (
       <ContentProvider>
-        <App />
+        <Suspense fallback={<div className="boot" />}>
+          <Page />
+        </Suspense>
       </ContentProvider>
     )}
   </StrictMode>,

@@ -39,7 +39,7 @@
   mask-image: linear-gradient(180deg, #000, transparent 90%);
 }
 
-.post-card:hover .post-cover {
+.post-card.is-linked:hover .post-cover {
   transform: scale(1.08);
 }
 
@@ -81,7 +81,7 @@
   transition: color 0.2s;
 }
 
-.post-card:hover .post-card__title {
+.post-card.is-linked:hover .post-card__title {
   color: var(--violet);
 }
 

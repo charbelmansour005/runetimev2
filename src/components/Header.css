@@ -68,6 +68,14 @@
   color: var(--violet);
 }
 
+.nav__link[aria-current='page'] {
+  color: var(--lilac);
+}
+
+.header.is-scrolled .nav__link[aria-current='page'] {
+  color: var(--violet);
+}
+
 .nav__item.has-menu:hover .nav__caret,
 .nav__item.has-menu:focus-within .nav__caret {
   transform: rotate(180deg);

@@ -319,7 +319,8 @@ export const SECTIONS = [
     key: 'insights',
     group: 'Home page',
     label: 'Insights',
-    description: 'Article cards. Link each one to the full post (your blog, LinkedIn, Medium…). Remove them all to hide the section.',
+    description:
+      'Articles. The home page shows the newest four and the Insights page (/insights) lists them all. Link each one to the full post (your blog, LinkedIn, Medium…); articles without a link aren’t clickable. Remove them all to hide the section.',
     fields: [
       sectionTitle,
       sectionIntro,
