@@ -77,7 +77,7 @@ export const defaultContent = {
   services: {
     title: 'Our Services',
     intro:
-      'From the first prototype to the platform that serves millions, we cover every discipline a modern product needs — under one roof and one standard of quality.',
+      'From the first prototype to the platform your users rely on every day, we cover every discipline a modern product needs — under one roof and one standard of quality.',
     menuPromo: {
       title: 'Not sure where to start?',
       text: 'Tell us what you are building and we will map the fastest path to launch.',
@@ -241,12 +241,9 @@ export const defaultContent = {
     title: 'The Collective in Numbers',
     intro: 'Senior people, long relationships and products that stay in production for years.',
     items: [
-      { value: '120+', label: 'Products shipped' },
-      { value: '40+', label: 'Engineers & designers' },
-      { value: '12', label: 'Countries served' },
-      { value: '98%', label: 'Client retention' },
-      { value: '1M+', label: 'Monthly users on our apps' },
-      { value: '24/7', label: 'Production support' },
+      { value: '5+', label: 'Developers on the team' },
+      { value: '100%', label: 'Client retention' },
+      { value: '100K+', label: 'Monthly users on our apps' },
     ],
   },
 

@@ -12,6 +12,11 @@
   margin: 8px 0 0;
 }
 
+/* An odd last stat takes the whole row, so the grid never has a gap. */
+.stat:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .stat {
   display: flex;
   flex-direction: column-reverse;
