@@ -23,7 +23,7 @@ export default function Work() {
           title={work.title}
           tone="ghost"
           intro={work.intro}
-          action={{ label: 'View all', href: '#contact' }}
+          action={{ label: 'Start a project', href: '#contact' }}
         />
         <Reveal className="work__filters" role="group" aria-label="Filter projects">
           {FILTERS.map((f) => (
@@ -38,38 +38,49 @@ export default function Work() {
             </button>
           ))}
         </Reveal>
+        <p className="sr-only" role="status">
+          {`Showing ${items.length} ${items.length === 1 ? 'project' : 'projects'}`}
+        </p>
       </div>
 
       <div className="work__grid">
-        {items.map((item, i) => (
-          <a
-            key={`${filter}-${itemKey(item, i)}`}
-            className="work-tile"
-            style={{ '--tile-bg': item.bg }}
-            {...linkProps(item.url, '#contact')}
-          >
-            <div className="work-tile__art" aria-hidden="true">
-              {item.image && (item.imageFit === 'cover' || item.imageFit === 'contain') ? (
-                <img
-                  className={`work-tile__img work-tile__img--${item.imageFit}`}
-                  src={item.image}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-              ) : (
-                <WorkArt item={item} screenshot={item.image || undefined} />
-              )}
-            </div>
-            <div className="work-tile__overlay">
-              <h3>{item.name}</h3>
-              <p>{item.excerpt}</p>
-              <span className="work-tile__more">
-                View case study <Arrow />
-              </span>
-            </div>
-          </a>
-        ))}
+        {items.map((item, i) => {
+          // Only projects with a case study link are clickable.
+          const Tile = item.url ? 'a' : 'article';
+          const external = item.url && /^https?:\/\//i.test(item.url);
+          return (
+            <Tile
+              key={`${filter}-${itemKey(item, i)}`}
+              className={`work-tile${item.url ? ' is-linked' : ''}`}
+              style={{ '--tile-bg': item.bg }}
+              {...(item.url ? linkProps(item.url) : {})}
+            >
+              <div className="work-tile__art" aria-hidden="true">
+                {item.image && (item.imageFit === 'cover' || item.imageFit === 'contain') ? (
+                  <img
+                    className={`work-tile__img work-tile__img--${item.imageFit}`}
+                    src={item.image}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <WorkArt item={item} screenshot={item.image || undefined} />
+                )}
+              </div>
+              <div className="work-tile__overlay">
+                <h3>{item.name}</h3>
+                <p>{item.excerpt}</p>
+                {item.url && (
+                  <span className="work-tile__more">
+                    View case study <Arrow />
+                    {external && <span className="sr-only"> (opens in a new tab)</span>}
+                  </span>
+                )}
+              </div>
+            </Tile>
+          );
+        })}
       </div>
     </section>
   );

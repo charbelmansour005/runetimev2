@@ -235,6 +235,7 @@ export const SECTIONS = [
           {
             name: 'image',
             type: 'image',
+            maxSize: 1000,
             label: 'Screenshot or image',
             help: 'Optional. An app screenshot goes on the phone or laptop screen; any other image can fill the whole tile instead.',
           },

@@ -28,19 +28,25 @@ async function migrateHeroSlides() {
 
 // First-run setup: default content and the first CMS admin.
 export async function bootstrap() {
-  if (!(await SiteContent.exists({ key: 'site' }))) {
+  // Runs on every cold start, so the independent checks go out together.
+  const [hasContent, userCount] = await Promise.all([
+    SiteContent.exists({ key: 'site' }),
+    User.estimatedDocumentCount(),
+  ]);
+
+  if (!hasContent) {
     await SiteContent.create({ key: 'site', ...defaultContent, updatedBy: 'seed' });
     console.log('[setup] created the site content from the defaults');
+  } else {
+    try {
+      await migrateHeroSlides();
+    } catch (err) {
+      // The site copes with unconverted slides, so don't take the API down over it.
+      console.error(`[setup] could not convert the hero slides: ${err.message}`);
+    }
   }
 
-  try {
-    await migrateHeroSlides();
-  } catch (err) {
-    // The site copes with unconverted slides, so don't take the API down over it.
-    console.error(`[setup] could not convert the hero slides: ${err.message}`);
-  }
-
-  if ((await User.estimatedDocumentCount()) === 0) {
+  if (userCount === 0) {
     if (config.adminEmail && config.adminPassword) {
       await User.create({
         email: config.adminEmail,

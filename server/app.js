@@ -56,11 +56,17 @@ export function createApp() {
         },
       }),
     );
+    // Real pages get their HTML (each with its own <head>); anything else is a 404.
+    const PAGES = { '/': 'index.html', '/insights': 'insights.html' };
     app.use((req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-      if (req.path.startsWith('/admin')) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      const pathname = req.path.replace(/\/+$/, '') || '/';
+      const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/');
+      const page = isAdmin ? 'admin.html' : PAGES[pathname];
       res.setHeader('Cache-Control', 'no-cache');
-      return res.sendFile(path.join(distDir, 'index.html'));
+      if (!page) return res.status(404).sendFile(path.join(distDir, '404.html'));
+      if (isAdmin) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      return res.sendFile(path.join(distDir, page));
     });
   }
 

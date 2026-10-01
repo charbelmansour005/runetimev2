@@ -40,9 +40,9 @@ router.get('/media/:id', requireDb, async (req, res) => {
 });
 
 router.post('/contact', contactLimiter, requireDb, async (req, res) => {
-  const { name, email, company, message, website } = req.body ?? {};
-  // "website" is a hidden honeypot field: people never fill it in, bots do.
-  if (website) return res.status(201).json({ ok: true });
+  const { name, email, company, message, referral_code: trap } = req.body ?? {};
+  // A hidden spam-trap field: people never see it, bots fill it in.
+  if (trap) return res.status(201).json({ ok: true });
   await Message.create({
     name: String(name ?? ''),
     email: String(email ?? ''),

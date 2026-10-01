@@ -13,10 +13,17 @@ export default function Industries() {
   const [active, setActive] = useState(0);
   const item = items[Math.min(active, items.length - 1)];
 
+  // The list is vertical on desktop and a horizontal scroller on smaller
+  // screens, so both arrow axes move between tabs, plus Home and End.
   const onKeyDown = (e) => {
-    if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+    const n = items.length;
+    const steps = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 };
+    let next;
+    if (e.key in steps) next = (active + steps[e.key] + n) % n;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = n - 1;
+    else return;
     e.preventDefault();
-    const next = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     setActive(next);
     document.getElementById(`industry-tab-${next}`)?.focus();
   };
@@ -29,11 +36,11 @@ export default function Industries() {
           title={industries.title}
           tone="ghost"
           intro={industries.intro}
-          action={{ label: 'View all', href: '#contact' }}
+          action={{ label: 'Talk to us', href: '#contact' }}
         />
 
         <div className="industries__body">
-          <Reveal className="industries__tabs" role="tablist" aria-label={industries.title} aria-orientation="vertical" onKeyDown={onKeyDown}>
+          <Reveal className="industries__tabs" role="tablist" aria-label={industries.title} onKeyDown={onKeyDown}>
             {items.map((ind, i) => (
               <button
                 key={itemKey(ind, i)}
@@ -41,7 +48,7 @@ export default function Industries() {
                 type="button"
                 role="tab"
                 aria-selected={ind === item}
-                aria-controls="industry-panel"
+                aria-controls={`industry-panel-${i}`}
                 tabIndex={ind === item ? 0 : -1}
                 className={`industry-tab${ind === item ? ' is-active' : ''}`}
                 onClick={() => setActive(i)}
@@ -52,27 +59,35 @@ export default function Industries() {
             ))}
           </Reveal>
 
+          {/* Every industry's copy is in the page (for search engines too); only
+              the selected one shows, with its illustration. */}
           <Reveal delay={120}>
-            <div
-              key={itemKey(item, active)}
-              id="industry-panel"
-              className="industry-panel"
-              role="tabpanel"
-              aria-labelledby={`industry-tab-${items.indexOf(item)}`}
-            >
-              <div className="industry-panel__copy">
-                <h3>{item.name}</h3>
-                <p>{item.text}</p>
-                <ul>
-                  {item.points.map((point, i) => (
-                    <li key={i}>{point}</li>
-                  ))}
-                </ul>
+            {items.map((ind, i) => (
+              <div
+                key={itemKey(ind, i)}
+                id={`industry-panel-${i}`}
+                className="industry-panel"
+                role="tabpanel"
+                tabIndex={0}
+                aria-labelledby={`industry-tab-${i}`}
+                hidden={ind !== item}
+              >
+                <div className="industry-panel__copy">
+                  <h3>{ind.name}</h3>
+                  <p>{ind.text}</p>
+                  <ul>
+                    {ind.points.map((point, j) => (
+                      <li key={j}>{point}</li>
+                    ))}
+                  </ul>
+                </div>
+                {ind === item && (
+                  <div className="industry-panel__visual" aria-hidden="true">
+                    <IndustryVisual id={ind.visual} />
+                  </div>
+                )}
               </div>
-              <div className="industry-panel__visual" aria-hidden="true">
-                <IndustryVisual id={item.visual} />
-              </div>
-            </div>
+            ))}
           </Reveal>
         </div>
       </div>

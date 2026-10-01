@@ -14,7 +14,7 @@ export default function Services() {
           id="services-title"
           title={services.title}
           intro={services.intro}
-          action={{ label: 'View all', href: '#contact' }}
+          action={{ label: 'Start a project', href: '#contact' }}
         />
         <div className="services__grid">
           {services.items.map((service, i) => (

@@ -25,10 +25,10 @@ export default function Footer() {
             <Logo />
             <p>{brand.tagline}</p>
           </div>
-          <div className="footer__grid">
+          <nav className="footer__grid" aria-label="Footer">
             {columns.map((col) => (
-              <nav key={col.href} className="footer__col" aria-label={col.title}>
-                <h3>{col.title}</h3>
+              <div key={col.href} className="footer__col">
+                <h2>{col.title}</h2>
                 <ul>
                   {col.links.map((link, i) => (
                     <li key={i}>
@@ -36,9 +36,9 @@ export default function Footer() {
                     </li>
                   ))}
                 </ul>
-              </nav>
+              </div>
             ))}
-            <nav className="footer__col footer__col--primary" aria-label="Site">
+            <div className="footer__col footer__col--primary">
               <ul>
                 {PRIMARY_LINKS.map((link) => (
                   <li key={link.label}>
@@ -46,8 +46,8 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </nav>
-          </div>
+            </div>
+          </nav>
         </div>
       </div>
       <div className="footer__bottom">
@@ -56,7 +56,8 @@ export default function Footer() {
             © {new Date().getFullYear()} {brand.name}. All rights reserved.
           </p>
           <div className="footer__socials">
-            {brand.socials.map((s, i) => (
+            {/* Placeholder links ("#") stay hidden until a real URL is set in the CMS. */}
+            {brand.socials.filter((s) => /^https?:\/\//i.test(s.href)).map((s, i) => (
               <a key={s._id ?? i} href={s.href} aria-label={s.label}>
                 <SocialIcon name={s.icon} />
               </a>

@@ -8,6 +8,7 @@
 
 .work__filters {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
   margin-bottom: 44px;
@@ -31,9 +32,17 @@
   background: rgba(255, 255, 255, 0.09);
 }
 
+/* Selected: inverted, so it stands out clearly (not just a faint fill). */
 .filter-pill.is-active {
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--white);
+  background: var(--white);
+  color: var(--ink-900);
+}
+
+/* Tiles touch each other, so draw the focus ring inside the tile. */
+.work-tile:focus-visible {
+  z-index: 1;
+  outline-offset: -4px;
 }
 
 .work__grid {
@@ -91,7 +100,7 @@
   position: absolute;
   inset: auto 0 0;
   padding: 90px 22px 20px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.72) 70%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.62) 38%, rgba(0, 0, 0, 0.84) 100%);
   transform: translateY(30px);
   transition: transform 0.45s var(--ease-out-3);
 }
@@ -112,7 +121,7 @@
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.82);
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .work-tile__more {

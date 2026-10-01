@@ -1,27 +1,34 @@
-import { useEffect } from 'react';
+import { lazy, startTransition, Suspense, useEffect, useState } from 'react';
 import Header from './components/Header';
 import Hero from './components/hero/Hero';
-import About from './components/About';
-import Services from './components/Services';
-import Industries from './components/Industries';
-import Solutions from './components/Solutions';
-import Work from './components/Work';
-import Stack from './components/Stack';
-import Numbers from './components/Numbers';
-import Insights from './components/Insights';
-import Contact from './components/Contact';
 import Footer from './components/Footer';
 import { useContent } from './content/ContentProvider';
 import { useDocumentMeta } from './content/meta';
 
+// The rest of the home page is its own chunk: on the home page it starts
+// downloading straight away, and renders once the hero has painted.
+let belowFold;
+const loadBelowFold = () => (belowFold ??= import('./BelowFold'));
+const BelowFold = lazy(loadBelowFold);
+if (window.location.pathname === '/') loadBelowFold();
+
 export default function App() {
   const { seo } = useContent();
   useDocumentMeta(seo);
+  const [rest, setRest] = useState(false);
 
-  // Links from other pages (like /#contact) arrive before the sections exist.
   useEffect(() => {
-    const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
-    target?.scrollIntoView({ behavior: 'instant' });
+    // Two frames: the hero is on screen before the rest starts rendering.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => startTransition(() => setRest(true)));
+    });
+    // A section link clicked before then still needs its section.
+    const onHash = () => setRest(true);
+    window.addEventListener('hashchange', onHash);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('hashchange', onHash);
+    };
   }, []);
 
   return (
@@ -32,17 +39,13 @@ export default function App() {
       <Header />
       <main id="main">
         <Hero />
-        <About />
-        <Services />
-        <Industries />
-        <Solutions />
-        <Work />
-        <Stack />
-        <Numbers />
-        <Insights />
-        <Contact />
+        {rest && (
+          <Suspense fallback={null}>
+            <BelowFold />
+          </Suspense>
+        )}
       </main>
-      <Footer />
+      {rest && <Footer />}
     </>
   );
 }

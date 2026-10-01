@@ -96,7 +96,15 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `src/components/` — site sections; `src/components/hero/` — slider, WebGL particle sculpture (`shapes.js` defines the formations) and wave.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
-- `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config.
+- `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config. Only real pages
+  (`/`, `/insights`, `/admin`) get the app; anything else is a real 404 (`public/404.html`).
+- `src/pages/` — pages other than the home page (`/insights`). `src/BelowFold.jsx` — the home page below
+  the hero, rendered just after the hero paints.
+- `vite.config.js` — besides the build, it writes `insights.html` and `admin.html` (each with its own
+  title, description, canonical and Open Graph tags), `robots.txt` and `sitemap.xml`, using the production
+  domain (`VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override).
+- `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's static poster.
+- `DESIGN.md` — the design system (tokens, type, components, do's and don'ts). Read it before adding UI.
 
 ## Security notes
 

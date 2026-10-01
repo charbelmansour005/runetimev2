@@ -29,7 +29,7 @@ export default function Logo({ tone = 'light' }) {
     <span className={`logo logo--${tone}`}>
       <LogoMark />
       <span className="logo__type">
-        <span className="logo__word">runtime</span>
+        <span className="logo__word">runtime</span>{' '}
         <span className="logo__sub">collective</span>
       </span>
     </span>

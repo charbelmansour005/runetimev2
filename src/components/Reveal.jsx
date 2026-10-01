@@ -29,6 +29,7 @@ export default function Reveal({ as: Tag = 'div', delay = 0, className = '', sty
   return (
     <Tag
       ref={ref}
+      onFocusCapture={() => setShown(true)}
       className={`reveal${shown ? ' is-visible' : ''}${className ? ` ${className}` : ''}`}
       style={{ ...style, '--reveal-delay': `${delay}ms` }}
       {...rest}

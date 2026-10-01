@@ -83,6 +83,23 @@
   );
 }
 
+/* Static particle cloud shown until the WebGL sculpture is ready. */
+.hero__poster {
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: min(80%, 84vh);
+  height: auto;
+  max-width: none;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+}
+
+.hero__poster.is-hidden {
+  opacity: 0;
+}
+
 /* ---------- Copy ---------- */
 
 .hero__content {
@@ -122,13 +139,14 @@
 
 /* ---------- Glass tab bar ---------- */
 
-.hero__tabs {
+.hero__tabbar {
   position: absolute;
   left: 50%;
   bottom: 0;
   z-index: 3;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: auto 1fr;
+  align-items: start;
   width: min(1400px, calc(100% - 40px));
   transform: translateX(-50%);
   border: 1px solid var(--glass-stroke);
@@ -139,10 +157,44 @@
   backdrop-filter: blur(5px);
 }
 
+.hero__tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* Pause / play for the auto-advancing slides. */
+.hero__play {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 18px 0 0 18px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--white);
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.hero__play:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.hero__play svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
 .hero-tab {
   position: relative;
   display: block;
-  height: 140px;
+  min-height: 140px;
   padding: 20px 25px;
   border: 0;
   background: transparent;
@@ -240,10 +292,12 @@
   }
 
   /* The tab bar collapses into story-style progress segments. */
-  .hero__tabs {
-    bottom: 36px;
+  .hero__tabbar {
+    bottom: 26px;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 10px;
     width: calc(100% - var(--gutter) * 2);
-    gap: 8px;
     border: 0;
     border-radius: 0;
     background: none;
@@ -251,16 +305,28 @@
     backdrop-filter: none;
   }
 
+  .hero__play {
+    order: 2;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+
+  .hero__tabs {
+    gap: 8px;
+  }
+
+  /* Thin bars, but a full 44px tall touch target. */
   .hero-tab {
-    height: 24px;
-    padding: 10px 0;
+    min-height: 44px;
+    padding: 20px 0;
     opacity: 1;
   }
 
   .hero-tab__bar,
   .hero-tab.is-active .hero-tab__bar {
     margin: 0;
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.55);
   }
 
   .hero-tab__title,

@@ -80,7 +80,7 @@
   gap: 7px;
 }
 
-.contact-form__field > span {
+.contact-form__field > span:first-child {
   color: rgba(255, 255, 255, 0.75);
   font-size: 12px;
   font-weight: 600;
@@ -97,12 +97,14 @@
 .contact-form textarea {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  /* Border strong enough (3:1) to show where each field is. */
+  border: 1px solid rgba(255, 255, 255, 0.36);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.06);
   color: var(--white);
   font: inherit;
-  font-size: 15px;
+  /* 16px stops iOS from zooming in when a field is focused. */
+  font-size: 16px;
   line-height: 1.5;
   transition:
     border-color 0.2s,
@@ -117,7 +119,9 @@
 
 .contact-form input:focus,
 .contact-form textarea:focus {
-  outline: none;
+  /* Transparent rather than none, so forced-colours mode still shows focus. */
+  outline: 2px solid transparent;
+  outline-offset: 2px;
   border-color: var(--violet-light);
   background: rgba(255, 255, 255, 0.09);
   box-shadow: 0 0 0 3px rgba(139, 92, 255, 0.25);
@@ -139,9 +143,28 @@
   margin-top: 4px;
 }
 
-.contact-form__actions .btn:disabled {
+.contact-form__actions .btn[aria-disabled='true'] {
   opacity: 0.7;
   cursor: progress;
+}
+
+.contact-form [aria-invalid='true'] {
+  border-color: #ff8f8f;
+}
+
+.contact-form__hint,
+.contact-form__field-error {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.contact-form__hint {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.contact-form__field-error {
+  color: #ffb4b4;
+  font-weight: 600;
 }
 
 .contact-form__error {
@@ -177,7 +200,7 @@
   height: 44px;
   border-radius: 50%;
   background: #3ddc97;
-  color: var(--white);
+  color: #0b2e1f;
 }
 
 .contact-done h3 {

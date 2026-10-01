@@ -2,17 +2,80 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0D0016" />
+    <title>Runtime Collective — Software & AI Engineering</title>
     <meta
       name="description"
       content="Runtime Collective is a software & AI engineering studio building web, mobile, AI and cloud products that are built to run."
     />
-    <title>Runtime Collective — Software & AI Engineering</title>
+    <link rel="canonical" href="%SITE_URL%/" />
+    <meta name="theme-color" content="#0D0016" />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Runtime Collective" />
+    <meta property="og:title" content="Runtime Collective — Software & AI Engineering" />
+    <meta
+      property="og:description"
+      content="Runtime Collective is a software & AI engineering studio building web, mobile, AI and cloud products that are built to run."
+    />
+    <meta property="og:url" content="%SITE_URL%/" />
+    <meta property="og:image" content="%SITE_URL%/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Runtime Collective: software & AI engineering, built to run" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The page waits for its CMS content, so fetch it while the app downloads. -->
+    <link rel="preload" href="/api/content" as="fetch" crossorigin />
+    <!-- Hero art shown before the WebGL sculpture loads (home page only). -->
+    <link rel="preload" href="/hero-poster.webp" as="image" type="image/webp" />
+    <!-- Dark from the first frame instead of a white flash before the CSS loads. -->
+    <style>
+      html {
+        background: #0d0016;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "%SITE_URL%#organization",
+            "name": "Runtime Collective",
+            "url": "%SITE_URL%",
+            "logo": "%SITE_URL%/icon-512.png",
+            "description": "Software & AI engineering studio building web, mobile, AI and cloud products."
+          },
+          {
+            "@type": "WebSite",
+            "@id": "%SITE_URL%#website",
+            "name": "Runtime Collective",
+            "url": "%SITE_URL%",
+            "publisher": { "@id": "%SITE_URL%#organization" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Loading screen (home page): the hero's background and art, before any JavaScript. -->
+      <div class="boot" aria-hidden="true">
+        <div class="hero__art">
+          <div class="hero__sculpture">
+            <img class="hero__poster" src="/hero-poster.webp" alt="" width="480" height="480" fetchpriority="high" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <noscript>
+      <p>Runtime Collective is a software &amp; AI engineering studio. This site needs JavaScript to show its content.</p>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -54,6 +54,10 @@ export default function InsightsPage() {
                 ))}
               </div>
             )}
+            <h2 className="sr-only">{tag ? `${tag} articles` : 'All articles'}</h2>
+            <p className="sr-only" role="status">
+              {`Showing ${shown.length} ${shown.length === 1 ? 'article' : 'articles'}`}
+            </p>
             {shown.length ? (
               <div className="insights__grid insights-archive__grid">
                 {shown.map((post, i) => (

@@ -22,6 +22,10 @@ body {
   overflow-x: clip;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 img,
 svg,
 canvas {
@@ -296,6 +300,39 @@ button {
   --shard-b: #2dd4bf;
 }
 
+/* Touch screens: small controls get a full 44px target without changing their look on desktop. */
+@media (pointer: coarse) {
+  .btn--accent,
+  .btn--ghost,
+  .filter-pill,
+  .archive-pill {
+    min-height: 44px;
+  }
+
+  .footer__socials a {
+    width: 44px;
+    height: 44px;
+  }
+
+  .mobile-menu__mail {
+    display: block;
+    padding: 12px 0;
+  }
+}
+
+/* Windows High Contrast / forced colours: keep states that rely on colour visible. */
+@media (forced-colors: active) {
+  .filter-pill.is-active,
+  .archive-pill.is-active,
+  .hero-tab.is-active {
+    outline: 2px solid Highlight;
+  }
+
+  .hero-tab__bar {
+    border: 1px solid CanvasText;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -322,4 +359,22 @@ button {
   position: fixed;
   inset: 0;
   background: var(--grad-hero);
+}
+
+.crashed {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 20px;
+  padding: 24px;
+  background: var(--grad-hero);
+  color: var(--white);
+  font-size: 18px;
+  text-align: center;
+}
+
+.crashed a {
+  justify-self: center;
+  color: var(--lilac);
+  font-weight: 700;
 }

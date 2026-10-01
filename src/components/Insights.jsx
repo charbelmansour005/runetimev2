@@ -39,11 +39,13 @@ export function PostCard({ post, delay = 0 }) {
       </p>
     </>
   );
+  const external = post.url && /^https?:\/\//i.test(post.url);
   return (
     <Reveal as="article" className={`post-card${post.url ? ' is-linked' : ''}`} delay={delay}>
       {post.url ? (
         <a className="post-card__link" {...linkProps(post.url)}>
           {content}
+          {external && <span className="sr-only">(opens in a new tab)</span>}
         </a>
       ) : (
         <div className="post-card__link">{content}</div>

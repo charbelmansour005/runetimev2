@@ -14,7 +14,7 @@ export default function Solutions() {
           id="solutions-title"
           title={solutions.title}
           intro={solutions.intro}
-          action={{ label: 'View all', href: '#contact' }}
+          action={{ label: 'Get a proposal', href: '#contact' }}
         />
         <div className="solutions__grid">
           {solutions.items.map((solution, i) => (
