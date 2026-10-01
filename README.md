@@ -38,6 +38,9 @@ brand/social links and SEO. Lists can be reordered, duplicated and removed; chan
 soon as you press **Save** (or ⌘/Ctrl + S). Invalid input is rejected by the API with a message
 pointing at the field.
 
+**Selected work** projects have an **Active** switch: turn it off to hide a project from the site
+without deleting it (the API leaves inactive projects out of the public content).
+
 **Insights** articles are written in the CMS in Markdown, and each gets its own page at
 `/insights/<web address>` (made from the title if you leave it empty). An article without text can
 link to a post published elsewhere instead.

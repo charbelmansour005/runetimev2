@@ -14,17 +14,24 @@ export function serializeContent(doc) {
   return plain;
 }
 
-// Every page loads the site content, so articles written in the CMS travel
-// as cards only (with a reading time); their text loads on their own page.
-function split(site) {
+// What the public site gets: only active projects (ones saved before the
+// switch existed count as active), and articles as cards only, with a reading
+// time; an article's text loads on its own page.
+function toPublic(site) {
+  const projects = (site.work?.items ?? [])
+    .filter((item) => item.active !== false)
+    .map(({ active, ...item }) => item);
   const articles = new Map();
-  const items = (site.insights?.items ?? []).map(({ body = '', ...post }) => {
+  const posts = (site.insights?.items ?? []).map(({ body = '', ...post }) => {
     if (!post.slug || !body) return { ...post, slug: '' };
     const card = { ...post, readMinutes: readMinutes(body) };
     articles.set(post.slug, { ...card, body });
     return card;
   });
-  return { content: { ...site, insights: { ...site.insights, items } }, articles };
+  return {
+    content: { ...site, work: { ...site.work, items: projects }, insights: { ...site.insights, items: posts } },
+    articles,
+  };
 }
 
 // The public site reads this on every page view, so keep it in memory briefly.
@@ -33,7 +40,7 @@ async function load() {
   const doc = await SiteContent.getSingleton().lean();
   if (!doc) return null;
   const { updatedBy, ...site } = serializeContent(doc);
-  cache = { value: split(site), at: Date.now() };
+  cache = { value: toPublic(site), at: Date.now() };
   return cache.value;
 }
 

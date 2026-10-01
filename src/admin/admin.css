@@ -732,6 +732,107 @@ textarea.cms-input--code {
   gap: 2px;
 }
 
+/* Items switched off (lists with an Active switch) stay listed, dimmed. */
+.cms-item.is-inactive .cms-item__summary {
+  color: var(--cms-muted);
+}
+
+.cms-item.is-inactive .cms-item__index,
+.cms-item.is-inactive .cms-thumb,
+.cms-item.is-inactive .cms-swatch {
+  opacity: 0.45;
+}
+
+.cms-item__flag {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1eff7;
+  color: var(--cms-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cms-switch {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cms-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.cms-switch:hover {
+  background: #f1eff7;
+}
+
+.cms-switch.is-on {
+  color: var(--cms-text);
+}
+
+/* Off: 3.2:1 against the item; on: green at 3.8:1. */
+.cms-switch__track {
+  position: relative;
+  width: 30px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #8e8a9e;
+  transition: background-color 0.15s;
+}
+
+.cms-switch.is-on .cms-switch__track {
+  background: #079455;
+}
+
+.cms-switch__thumb {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.25);
+  transition: transform 0.15s;
+}
+
+.cms-switch.is-on .cms-switch__thumb {
+  transform: translateX(12px);
+}
+
+@media (forced-colors: active) {
+  .cms-switch__track {
+    border-color: ButtonText;
+  }
+
+  .cms-switch__thumb {
+    background: ButtonText;
+  }
+
+  .cms-switch.is-on .cms-switch__thumb {
+    background: Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cms-switch__thumb {
+    transition: none;
+  }
+}
+
 .cms-item__body {
   padding: 20px 20px 22px;
   border-top: 1px solid #efedf5;
@@ -1061,6 +1162,21 @@ textarea.cms-input--code {
 
   .cms-msg__snippet {
     display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Names get the full row; the switch and buttons go on a line below. */
+  .cms-item__head {
+    flex-wrap: wrap;
+  }
+
+  .cms-item__toggle {
+    flex-basis: 100%;
+  }
+
+  .cms-item__actions {
+    margin-left: auto;
   }
 }
 

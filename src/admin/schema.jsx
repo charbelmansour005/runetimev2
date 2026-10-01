@@ -16,6 +16,9 @@ import {
 // Field types: text, textarea, color, select, date, tags, lines (list of
 // strings), group (nested object) and list (list of objects).
 // Widths: full (default), half, third, quarter.
+// A list with `status: '<boolean field>'` gets an Active switch on each item;
+// items switched off stay in the CMS but aren't shown on the site (the API
+// leaves them out, see server/lib/content.js).
 
 const gradientSwatch = (from, to) => (
   <span className="cms-swatch" style={{ background: `linear-gradient(160deg, ${from}, ${to})` }} />
@@ -189,7 +192,8 @@ export const SECTIONS = [
     key: 'work',
     group: 'Home page',
     label: 'Selected work',
-    description: 'Case-study tiles. Tags drive the All / Web / Mobile / AI filter.',
+    description:
+      'Case-study tiles. Tags drive the All / Web / Mobile / AI filter. Turn off a project’s Active switch to hide it from the site without deleting it.',
     fields: [
       sectionTitle,
       sectionIntro,
@@ -200,6 +204,7 @@ export const SECTIONS = [
         itemLabel: 'project',
         minItems: 1,
         maxItems: 24,
+        status: 'active',
         summary: (w) => w.name,
         preview: (w) =>
           w.image ? (
@@ -218,6 +223,7 @@ export const SECTIONS = [
           image: '',
           imageFit: 'screen',
           icon: { from: '#4D00F2', to: '#8B5CFF', mark: 'N', accent: '#FFFFFF' },
+          active: true,
         }),
         fields: [
           { name: 'name', type: 'text', label: 'Project name', max: 60, width: 'half' },

@@ -136,6 +136,8 @@ const workSchema = new Schema({
     default: 'screen',
   },
   icon: section({ from: color, to: color, mark: text(2), accent: color }),
+  // Inactive projects stay in the CMS but aren't shown on the site.
+  active: { type: Boolean, default: true },
 });
 
 const statSchema = new Schema({

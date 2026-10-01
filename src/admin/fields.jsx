@@ -298,6 +298,12 @@ function ListControl({ field, value = [], onChange, errors, path }) {
     }
   };
 
+  // Lists with an on/off switch per item (`field.status` names the item's
+  // boolean): items switched off stay here but aren't shown on the site.
+  const isActive = (item) => !field.status || item[field.status] !== false;
+  const inactive = value.filter((item) => !isActive(item)).length;
+  const setActive = (i, active) => onChange(value.map((v, j) => (j === i ? { ...v, [field.status]: active } : v)));
+
   return (
     <section className="cms-list">
       <header className="cms-list__head">
@@ -305,6 +311,7 @@ function ListControl({ field, value = [], onChange, errors, path }) {
         <span className="cms-list__count">
           {value.length}
           {field.maxItems ? ` / ${field.maxItems}` : ''}
+          {inactive > 0 && ` · ${inactive} inactive`}
         </span>
       </header>
       {field.help && <p className="cms-help">{field.help}</p>}
@@ -314,18 +321,36 @@ function ListControl({ field, value = [], onChange, errors, path }) {
           {value.map((item, i) => {
             const key = keyOf(item, i);
             const isOpen = open.has(key);
+            const active = isActive(item);
+            const flagged = hasErrorsUnder(errors, [...path, i]);
+            const name = field.summary(item) || `Untitled ${field.itemLabel}`;
+            const classes = ['cms-item', isOpen && 'is-open', !active && 'is-inactive', flagged && 'has-error'];
             return (
-              <li
-                key={key}
-                className={`cms-item${isOpen ? ' is-open' : ''}${hasErrorsUnder(errors, [...path, i]) ? ' has-error' : ''}`}
-              >
+              <li key={key} className={classes.filter(Boolean).join(' ')}>
                 <div className="cms-item__head">
                   <button type="button" className="cms-item__toggle" aria-expanded={isOpen} onClick={() => toggle(key)}>
                     <span className="cms-item__index">{i + 1}</span>
                     {field.preview?.(item)}
-                    <span className="cms-item__summary">{field.summary(item) || `Untitled ${field.itemLabel}`}</span>
+                    <span className="cms-item__summary">{name}</span>
+                    {!active && <span className="cms-item__flag">Inactive</span>}
                     <IconDown className="cms-item__chev" />
                   </button>
+                  {field.status && (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={active}
+                      aria-label={`Active: ${name}`}
+                      title={active ? 'Shown on the site' : 'Hidden from the site'}
+                      className={`cms-switch${active ? ' is-on' : ''}`}
+                      onClick={() => setActive(i, !active)}
+                    >
+                      <span className="cms-switch__track" aria-hidden="true">
+                        <span className="cms-switch__thumb" />
+                      </span>
+                      Active
+                    </button>
+                  )}
                   <div className="cms-item__actions">
                     <IconButton label="Move up" disabled={i === 0} onClick={() => onChange(move(value, i, -1))}>
                       <IconUp />

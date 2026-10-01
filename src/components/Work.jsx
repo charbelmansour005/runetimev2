@@ -13,6 +13,8 @@ const FILTERS = [{ value: 'all', label: 'All' }, ...WORK_TAG_OPTIONS];
 export default function Work() {
   const { work } = useContent();
   const [filter, setFilter] = useState('all');
+  // Every project switched off in the CMS: hide the section.
+  if (!work.items.length) return null;
   const items = work.items.filter((item) => filter === 'all' || item.tags.includes(filter));
 
   return (
