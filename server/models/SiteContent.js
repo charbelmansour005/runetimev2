@@ -11,6 +11,7 @@ import {
   WORK_TAG_OPTIONS,
   optionValues,
 } from '../../src/data/options.js';
+import { SLUG_MAX, SLUG_PATTERN, slugify } from '../../src/data/insights.js';
 import { MEDIA_URL_PATTERN } from './Media.js';
 import { EMAIL_PATTERN } from './Message.js';
 
@@ -142,13 +143,34 @@ const statSchema = new Schema({
   label: text(60),
 });
 
+// An article is either written here (`body`, shown at /insights/<slug>) or a
+// link to a post elsewhere (`url`).
 const insightSchema = new Schema({
   title: text(140),
   date: { type: String, required: [true, 'Pick a date'], match: [/^\d{4}-\d{2}-\d{2}$/, 'Dates look like 2026-09-28'] },
   tag: text(40),
+  summary: text(240, { required: false }),
+  slug: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    maxlength: tooLong(SLUG_MAX),
+    default: '',
+    validate: {
+      validator: (v) => !v || SLUG_PATTERN.test(v),
+      message: 'Use lowercase letters, numbers and dashes, like how-we-ship',
+    },
+  },
+  body: { type: String, trim: true, maxlength: tooLong(40000), default: '' },
   url: link,
   art: section({ from: color, to: color, glow: color, glyph: oneOf(GLYPH_OPTIONS) }),
 });
+
+const insightList = list(insightSchema, { min: 0, max: 24 });
+const uniqueSlugs = (items) => {
+  const slugs = items.map((item) => item.slug).filter(Boolean);
+  return new Set(slugs).size === slugs.length;
+};
 
 const menuPromo = section({ title: text(60), text: text(160) });
 
@@ -219,13 +241,30 @@ const siteContentSchema = new Schema(
     insights: section({
       title: text(80),
       intro: text(400, { required: false }),
-      items: list(insightSchema, { min: 0, max: 24 }),
+      items: {
+        ...insightList,
+        validate: [insightList.validate, { validator: uniqueSlugs, message: 'Two articles have the same web address' }],
+      },
     }),
     contact: section({ title: text(120), text: text(400) }),
     updatedBy: { type: String, default: '' },
   },
   { timestamps: true, minimize: false },
 );
+
+// Articles written here get a web address from their title when none is set.
+siteContentSchema.pre('validate', function fillArticleSlugs() {
+  const items = this.insights?.items ?? [];
+  const taken = new Set(items.map((item) => item.slug).filter(Boolean));
+  for (const item of items) {
+    if (item.slug || !item.body?.trim()) continue;
+    const base = slugify(item.title) || 'article';
+    let slug = base;
+    for (let n = 2; taken.has(slug); n += 1) slug = `${base}-${n}`;
+    item.slug = slug;
+    taken.add(slug);
+  }
+});
 
 siteContentSchema.statics.getSingleton = function getSingleton() {
   return this.findOne({ key: 'site' });

@@ -247,37 +247,51 @@ export const defaultContent = {
     ],
   },
 
+  // The articles' text is in src/data/insights/<slug>.md; seeding the database
+  // adds it (server/lib/defaults.js), and the site loads it per article.
   insights: {
     title: 'Latest Insights',
     intro: 'Notes from the collective on engineering, AI and shipping products that last.',
     items: [
       {
-        title: 'Shipping LLM features without breaking production',
-        date: '2026-09-12',
-        tag: 'AI Engineering',
+        title: 'How a rotating headline pushed our LCP to 12.8 seconds',
+        slug: 'rotating-hero-lcp',
+        date: '2026-10-01',
+        tag: 'Performance',
+        summary:
+          'Every time our hero rotated, Chrome counted the new headline as the page’s largest paint. How we found it, what didn’t fix it, and the 33 KB image that did.',
+        url: '',
+        art: { from: '#0B2A3A', to: '#0E7490', glow: '#7EE0F0', glyph: 'prompt' },
+      },
+      {
+        title: '8,400 particles, one shader: how our hero morphs',
+        slug: 'particle-hero-webgl',
+        date: '2026-10-01',
+        tag: 'Engineering',
+        summary:
+          'Our hero is a cloud of particles that rebuilds itself into a new shape for every slide. How we generate the shapes, morph them on the GPU and keep it from slowing the page down.',
         url: '',
         art: { from: '#2A0A6B', to: '#6D28FF', glow: '#F08BF5', glyph: 'spark' },
       },
       {
-        title: 'React Native or fully native in 2026? How we decide',
-        date: '2026-08-28',
-        tag: 'Mobile',
+        title: 'What it took to make our auto-rotating hero accessible',
+        slug: 'accessible-auto-rotating-hero',
+        date: '2026-10-01',
+        tag: 'Accessibility',
+        summary:
+          'Carousels have a bad reputation, mostly earned. The changes that made ours work by keyboard, screen reader and touch, from a pause button to one heading that doesn’t move.',
         url: '',
-        art: { from: '#0B2A3A', to: '#0E7490', glow: '#7EE0F0', glyph: 'code' },
+        art: { from: '#14301A', to: '#3F8F3A', glow: '#C6F432', glyph: 'braces' },
       },
       {
-        title: 'The real cost of a monolith — and when to keep it',
-        date: '2026-08-07',
-        tag: 'Architecture',
+        title: 'Why our robots.txt was serving our home page',
+        slug: 'spa-real-404s',
+        date: '2026-10-01',
+        tag: 'SEO',
+        summary:
+          'One catch-all rewrite sent every unknown URL on our React site to the home page, robots.txt included. How we fixed routing on Vite and Vercel without a framework.',
         url: '',
-        art: { from: '#3A0D1E', to: '#BE3455', glow: '#FFB199', glyph: 'braces' },
-      },
-      {
-        title: 'How our dedicated teams onboard in two weeks',
-        date: '2026-07-22',
-        tag: 'Collective',
-        url: '',
-        art: { from: '#14301A', to: '#3F8F3A', glow: '#C6F432', glyph: 'prompt' },
+        art: { from: '#3A0D1E', to: '#BE3455', glow: '#FFB199', glyph: 'code' },
       },
     ],
   },

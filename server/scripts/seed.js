@@ -3,8 +3,8 @@
 //                           (CMS users and contact messages are kept)
 import mongoose from 'mongoose';
 import { config } from '../config.js';
-import { defaultContent } from '../../src/data/content.js';
 import { bootstrap } from '../lib/bootstrap.js';
+import { seedContent } from '../lib/defaults.js';
 import { SECTION_KEYS, SiteContent } from '../models/SiteContent.js';
 
 const reset = process.argv.includes('--reset');
@@ -15,7 +15,8 @@ try {
 
   if (reset) {
     const doc = (await SiteContent.getSingleton()) ?? new SiteContent({ key: 'site' });
-    for (const key of SECTION_KEYS) doc.set(key, defaultContent[key]);
+    const defaults = seedContent();
+    for (const key of SECTION_KEYS) doc.set(key, defaults[key]);
     doc.updatedBy = 'seed --reset';
     await doc.save();
     console.log('[seed] site content reset to the defaults');

@@ -464,6 +464,13 @@ textarea.cms-input {
   border-color: #cdc8dc;
 }
 
+/* Long-form Markdown (article text). */
+textarea.cms-input--code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .cms-input:focus {
   outline: none;
   border-color: var(--violet-light);

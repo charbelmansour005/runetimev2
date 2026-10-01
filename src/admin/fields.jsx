@@ -47,7 +47,8 @@ function TextareaControl({ id, field, value, onChange }) {
   return (
     <textarea
       id={id}
-      className="cms-input"
+      className={`cms-input${field.code ? ' cms-input--code' : ''}`}
+      spellCheck={field.code ? false : undefined}
       rows={field.rows ?? 3}
       value={value ?? ''}
       maxLength={field.max}

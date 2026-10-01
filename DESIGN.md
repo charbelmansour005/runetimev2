@@ -99,9 +99,21 @@ at least 44px tall on coarse pointers.
 **Cards.**
 - Radius: `--radius-card` (20px) for large cards, 14–16px for media.
 - Service cards: shard icon plus title and text.
-- Insight cards (`PostCard`): 16:10 cover, then title, then meta. Clickable only when a link exists.
+- Insight cards (`PostCard`): 16:10 cover, then title, then meta (date, category and, for articles
+  written in the CMS, reading time). Clickable only when there's an article page or a link.
 - Work tiles: 4:3, full-bleed colour, device mockup or screenshot, caption on a dark scrim. A tile is a
   link only when a case study URL exists.
+
+**Article page (`/insights/<slug>`).**
+- Dark page-hero band: breadcrumb, then category pill (lilac outline), date and reading time, then the
+  title (`clamp(30px, 4.6vw, 56px)`) and summary. The cover overlaps the bottom of the band (e3 shadow,
+  `--radius-card`).
+- Body column 720px wide: 17px/1.75 `--ink-700` text, h2 28px and h3 20px in `--ink-900`, violet
+  underlined links and list markers.
+- Inline code on `--lilac-soft`; code blocks on `--void` at 14px, focusable so long lines scroll by
+  keyboard. Tables use hairline rows and uppercase 12px headers, and wrap instead of scrolling.
+- The article ends with "Published by…" and a "Start a project" action, then "Keep reading" (three
+  more cards on mist).
 
 **Glass tab bar (hero).**
 - Translucent ink with a white 30% stroke and 5px blur.

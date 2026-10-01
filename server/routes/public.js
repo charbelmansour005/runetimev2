@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { config } from '../config.js';
 import { isDbReady } from '../db.js';
-import { getPublicContent } from '../lib/content.js';
+import { getArticle, getPublicContent } from '../lib/content.js';
 import mongoose from 'mongoose';
 import { Media } from '../models/Media.js';
 import { Message } from '../models/Message.js';
@@ -14,16 +14,25 @@ router.get('/health', (req, res) => {
   res.json({ ok: true, database: isDbReady() ? 'connected' : 'unavailable' });
 });
 
+// On Vercel, let the CDN answer instantly and refresh in the background, so
+// visitors never wait on a cold function; CMS edits show within ~10 seconds.
+export const PUBLIC_CACHE = config.isVercel
+  ? 'public, max-age=0, s-maxage=10, stale-while-revalidate=86400'
+  : 'no-cache';
+
 router.get('/content', requireDb, async (req, res) => {
   const content = await getPublicContent();
   if (!content) return res.status(404).json({ error: 'No site content yet.' });
-  // On Vercel, let the CDN answer instantly and refresh in the background, so
-  // visitors never wait on a cold function; CMS edits show within ~10 seconds.
-  res.set(
-    'Cache-Control',
-    config.isVercel ? 'public, max-age=0, s-maxage=10, stale-while-revalidate=86400' : 'no-cache',
-  );
+  res.set('Cache-Control', PUBLIC_CACHE);
   return res.json(content);
+});
+
+// One article with its full text (the page at /insights/<slug> embeds it).
+router.get('/insights/:slug', requireDb, async (req, res) => {
+  const article = await getArticle(req.params.slug);
+  res.set('Cache-Control', PUBLIC_CACHE);
+  if (!article) return res.status(404).json({ error: 'Article not found.' });
+  return res.json(article);
 });
 
 // Uploaded images. Each upload gets a new id, so responses never change and can

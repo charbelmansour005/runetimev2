@@ -3,6 +3,9 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/index.js": { "includeFiles": "src/data/insights/*.md" }
+  },
   "trailingSlash": false,
   "redirects": [
     { "source": "/insights.html", "destination": "/insights", "permanent": true },
@@ -11,6 +14,8 @@
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/insights", "destination": "/insights.html" },
+    { "source": "/insights/:slug", "destination": "/api" },
+    { "source": "/sitemap.xml", "destination": "/api" },
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/admin/:path*", "destination": "/admin.html" }
   ],

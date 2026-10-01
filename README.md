@@ -38,6 +38,10 @@ brand/social links and SEO. Lists can be reordered, duplicated and removed; chan
 soon as you press **Save** (or ⌘/Ctrl + S). Invalid input is rejected by the API with a message
 pointing at the field.
 
+**Insights** articles are written in the CMS in Markdown, and each gets its own page at
+`/insights/<web address>` (made from the title if you leave it empty). An article without text can
+link to a post published elsewhere instead.
+
 The **Inbox** collects messages sent through the contact form on the site (spam is filtered with
 a honeypot field and rate limiting).
 
@@ -46,7 +50,8 @@ a honeypot field and rate limiting).
 ### Vercel
 
 The repo is ready for Vercel: the site is served from Vercel's CDN, and `api/index.js` runs the
-Express API as a serverless function (`vercel.json` routes every `/api/*` request to it).
+Express API as a serverless function (`vercel.json` routes every `/api/*` request to it, plus article
+pages and `sitemap.xml`).
 
 1. In Vercel: **Add New → Project → Import** this GitHub repo. Framework (Vite), build command and
    output folder come from `vercel.json` — leave them as they are.
@@ -92,17 +97,23 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 ## Where things live
 
 - `src/data/content.js` — default content (also seeds the database). `src/data/options.js` — choices offered by the CMS.
+  `src/data/insights/<slug>.md` — the default articles' text, added when the database is seeded
+  (`server/lib/defaults.js`); `src/data/insights.js` — article helpers shared by the site, CMS and API.
 - `src/content/` — loads content from the API for the site.
 - `src/components/` — site sections; `src/components/hero/` — slider, WebGL particle sculpture (`shapes.js` defines the formations) and wave.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
 - `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config. Only real pages
-  (`/`, `/insights`, `/admin`) get the app; anything else is a real 404 (`public/404.html`).
-- `src/pages/` — pages other than the home page (`/insights`). `src/BelowFold.jsx` — the home page below
+  (`/`, `/insights`, `/insights/<slug>`, `/admin`) get the app; anything else is a real 404 (`public/404.html`).
+- `server/routes/pages.js` — article pages and `sitemap.xml`, built from the CMS content: each article
+  page is `insights.html` with the article's title, summary, canonical URL and JSON-LD in its head and
+  the article embedded; unknown articles get the 404 page with a 404 status.
+- `src/pages/` — pages other than the home page (`/insights`, `/insights/<slug>`). `src/content/Markdown.jsx`
+  renders article text (React elements only, never raw HTML). `src/BelowFold.jsx` — the home page below
   the hero, rendered just after the hero paints.
 - `vite.config.js` — besides the build, it writes `insights.html` and `admin.html` (each with its own
-  title, description, canonical and Open Graph tags), `robots.txt` and `sitemap.xml`, using the production
-  domain (`VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override).
+  title, description, canonical and Open Graph tags) and `robots.txt`, using the production domain
+  (`VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override; see `server/lib/html.js`).
 - `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's static poster.
 - `DESIGN.md` — the design system (tokens, type, components, do's and don'ts). Read it before adding UI.
 

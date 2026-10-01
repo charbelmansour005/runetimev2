@@ -12,7 +12,24 @@ import { ContentProvider } from './content/ContentProvider.jsx';
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
 const isAdmin = /^\/admin(\/|$)/.test(window.location.pathname);
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
-const Page = path === '/insights' ? InsightsPage : App;
+
+// Articles (/insights/<slug>) are their own chunk, fetched straight away on
+// an article's page, alongside the site content.
+const loadArticlePage = () => import('./pages/ArticlePage.jsx');
+const ArticlePage = lazy(loadArticlePage);
+const articleSlug = /^\/insights\/([^/]+)$/.exec(path)?.[1];
+if (articleSlug) loadArticlePage();
+
+function Page() {
+  if (articleSlug) {
+    return (
+      <Suspense fallback={<div className="boot" />}>
+        <ArticlePage slug={articleSlug} />
+      </Suspense>
+    );
+  }
+  return path === '/insights' ? <InsightsPage /> : <App />;
+}
 
 // If something fails badly, offer a reload instead of a blank page.
 const crashed = (

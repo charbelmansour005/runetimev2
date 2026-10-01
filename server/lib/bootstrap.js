@@ -1,8 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
-import { defaultContent } from '../../src/data/content.js';
 import { HERO_SHAPE_OPTIONS, optionValues } from '../../src/data/options.js';
 import { SiteContent } from '../models/SiteContent.js';
+import { seedContent } from './defaults.js';
 import { User } from '../models/User.js';
 
 // Hero slides saved before the particle sculpture had a crystal symbol
@@ -35,7 +35,7 @@ export async function bootstrap() {
   ]);
 
   if (!hasContent) {
-    await SiteContent.create({ key: 'site', ...defaultContent, updatedBy: 'seed' });
+    await SiteContent.create({ key: 'site', ...seedContent(), updatedBy: 'seed' });
     console.log('[setup] created the site content from the defaults');
   } else {
     try {

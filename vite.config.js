@@ -1,27 +1,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { PAGES, setHead, siteUrl } from './server/lib/html.js';
 
-// The public address, for canonical and Open Graph URLs, robots.txt and the
-// sitemap. On Vercel it follows the production domain (a custom domain once
-// one is added); SITE_URL overrides it.
-const SITE_URL = (
-  process.env.SITE_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) ||
-  'https://runtimecollective.vercel.app'
-).replace(/\/+$/, '');
-
-// Pages with their own static <head>, so crawlers and link previews (which
-// don't run JavaScript) see the right title, description and URL.
-const PAGES = [
-  { path: '/', file: 'index.html' },
-  {
-    path: '/insights',
-    file: 'insights.html',
-    title: 'Latest Insights — Runtime Collective',
-    description: 'Notes from Runtime Collective on engineering, AI and shipping products that last.',
-  },
-];
+const SITE_URL = siteUrl();
 
 // Removes the home page's hero art (loading screen and its preload) from a page.
 const withoutHeroArt = (html) =>
@@ -29,10 +11,9 @@ const withoutHeroArt = (html) =>
     .replace(/\s*<!-- Hero art[^>]*-->\s*<link rel="preload" href="\/hero-poster\.webp"[^>]*>/, '')
     .replace(/\s*<!-- Loading screen[^>]*-->[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/, '\n      <div class="boot" aria-hidden="true"></div>');
 
-const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-
 function siteMeta() {
   let outDir = 'dist';
+  let articleAssets = '';
   return {
     name: 'site-meta',
     configResolved(config) {
@@ -49,18 +30,26 @@ function siteMeta() {
         return { html: html.replaceAll('%SITE_URL%', SITE_URL), tags };
       },
     },
-    generateBundle() {
+    // The sitemap lists the CMS's articles too, so the API serves it (server/routes/pages.js).
+    generateBundle(_, bundle) {
       this.emitFile({
         type: 'asset',
         fileName: 'robots.txt',
         source: `User-agent: *\nAllow: /\nDisallow: /admin\n\nSitemap: ${SITE_URL}/sitemap.xml\n`,
       });
-      const urls = PAGES.map((p) => `  <url><loc>${SITE_URL}${p.path === '/' ? '/' : p.path}</loc></url>`).join('\n');
-      this.emitFile({
-        type: 'asset',
-        fileName: 'sitemap.xml',
-        source: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`,
-      });
+      // Preloads for the article page's code. Article pages are built from
+      // insights.html, where these wait in a comment that the API switches on
+      // (server/routes/pages.js), so they load alongside the main bundle.
+      const article = Object.values(bundle).find(
+        (file) => file.type === 'chunk' && file.facadeModuleId?.endsWith('/src/pages/ArticlePage.jsx'),
+      );
+      if (article) {
+        const css = [...(article.viteMetadata?.importedCss ?? [])];
+        articleAssets = [
+          `<link rel="modulepreload" crossorigin href="/${article.fileName}">`,
+          ...css.map((file) => `<link rel="preload" as="style" crossorigin href="/${file}">`),
+        ].join('\n    ');
+      }
     },
     // Each extra page is the built index.html with its own head.
     closeBundle() {
@@ -74,17 +63,12 @@ function siteMeta() {
           .replace('<meta name="theme-color"', '<meta name="robots" content="noindex, nofollow" />\n    <meta name="theme-color"')
           .replace(/<div class="boot" aria-hidden="true"><\/div>/, ''),
       );
+      // Articles start from insights.html too; the API fills in their head.
       for (const page of PAGES.filter((p) => p.path !== '/')) {
+        const { title, description } = page;
         const url = `${SITE_URL}${page.path}`;
-        const title = escapeHtml(page.title);
-        const description = escapeHtml(page.description);
-        const html = withoutHeroArt(index)
-          .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
-          .replace(/(<meta\s+name="description"\s+content=")[^"]*/, `$1${description}`)
-          .replace(/(<meta\s+property="og:title"\s+content=")[^"]*/, `$1${title}`)
-          .replace(/(<meta\s+property="og:description"\s+content=")[^"]*/, `$1${description}`)
-          .replaceAll(`"${SITE_URL}/"`, `"${url}"`);
-        writeFileSync(`${outDir}/${page.file}`, html);
+        const extra = page.path === '/insights' && articleAssets ? `<!-- article-page ${articleAssets} -->` : '';
+        writeFileSync(`${outDir}/${page.file}`, setHead(withoutHeroArt(index), { title, description, url, extra }));
       }
     },
   };
@@ -94,7 +78,7 @@ export default defineConfig({
   plugins: [react(), siteMeta()],
   server: {
     // In development the Express API runs separately (npm run dev:server).
-    proxy: { '/api': 'http://localhost:4000' },
+    proxy: { '/api': 'http://localhost:4000', '/sitemap.xml': 'http://localhost:4000' },
   },
   build: {
     // three.js (~520 kB) is lazy-loaded for the hero only, so allow it without a warning.

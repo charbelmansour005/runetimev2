@@ -3,6 +3,7 @@ import SectionHead from './SectionHead';
 import { GLYPHS } from '../data/glyphs';
 import { useContent } from '../content/ContentProvider';
 import { formatDate, itemKey, linkProps } from '../content/format';
+import { articlePath } from '../data/insights';
 import './Insights.css';
 
 const PAD = 0.2;
@@ -11,7 +12,7 @@ const HOME_COUNT = 4;
 
 export const newestFirst = (items) => [...items].sort((a, b) => b.date.localeCompare(a.date));
 
-function PostCover({ from, to, glow, glyph }) {
+export function PostCover({ from, to, glow, glyph }) {
   const def = GLYPHS[glyph] ?? GLYPHS.spark;
   return (
     <div className="post-cover" style={{ '--from': from, '--to': to, '--glow': glow }} aria-hidden="true">
@@ -26,8 +27,10 @@ function PostCover({ from, to, glow, glyph }) {
   );
 }
 
-// Articles without a link are listed but not clickable.
+// Articles written in the CMS open on their own page; others link to where
+// they were published. Articles with neither are listed but not clickable.
 export function PostCard({ post, delay = 0 }) {
+  const href = post.slug ? articlePath(post.slug) : post.url;
   const content = (
     <>
       <div className="post-card__media">
@@ -36,14 +39,20 @@ export function PostCard({ post, delay = 0 }) {
       <h3 className="post-card__title">{post.title}</h3>
       <p className="post-card__meta">
         <time dateTime={post.date}>{formatDate(post.date)}</time> <span aria-hidden="true">|</span> {post.tag}
+        {post.readMinutes > 0 && (
+          <>
+            {' '}
+            <span aria-hidden="true">|</span> {post.readMinutes} min read
+          </>
+        )}
       </p>
     </>
   );
-  const external = post.url && /^https?:\/\//i.test(post.url);
+  const external = href && /^https?:\/\//i.test(href);
   return (
-    <Reveal as="article" className={`post-card${post.url ? ' is-linked' : ''}`} delay={delay}>
-      {post.url ? (
-        <a className="post-card__link" {...linkProps(post.url)}>
+    <Reveal as="article" className={`post-card${href ? ' is-linked' : ''}`} delay={delay}>
+      {href ? (
+        <a className="post-card__link" {...linkProps(href)}>
           {content}
           {external && <span className="sr-only">(opens in a new tab)</span>}
         </a>
