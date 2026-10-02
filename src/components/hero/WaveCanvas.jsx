@@ -39,8 +39,8 @@ const fragmentShader = /* glsl */ `
 `;
 
 // A slow, violet→coral wireframe "ocean" behind the hero — our take on the
-// particle-wave layer in the reference.
-export default function WaveCanvas({ className = '' }) {
+// particle-wave layer in the reference. The hero's pause button stops it.
+export default function WaveCanvas({ className = '', apiRef, playingRef }) {
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -107,26 +107,36 @@ export default function WaveCanvas({ className = '' }) {
 
     let raf = 0;
     let running = false;
+    let visible = false;
+    let last = 0;
     const frame = (now) => {
-      material.uniforms.uTime.value = now / 1000;
+      material.uniforms.uTime.value += Math.min((now - last) / 1000, 0.05);
+      last = now;
       renderer.render(scene, camera);
       raf = requestAnimationFrame(frame);
     };
-    const start = () => {
-      if (running || reduced) return;
-      running = true;
-      raf = requestAnimationFrame(frame);
+    const update = () => {
+      const run = visible && !reduced && (playingRef?.current ?? true);
+      if (run === running) return;
+      running = run;
+      if (run) {
+        last = performance.now();
+        raf = requestAnimationFrame(frame);
+      } else {
+        cancelAnimationFrame(raf);
+      }
     };
-    const stop = () => {
-      running = false;
-      cancelAnimationFrame(raf);
-    };
-    const io = new IntersectionObserver(([entry]) => (entry.isIntersecting ? start() : stop()));
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      update();
+    });
     io.observe(mount);
+    if (apiRef) apiRef.current = { setPlaying: update };
     if (reduced) renderer.render(scene, camera);
 
     return () => {
-      stop();
+      cancelAnimationFrame(raf);
+      if (apiRef) apiRef.current = null;
       io.disconnect();
       ro.disconnect();
       geometry.dispose();
@@ -135,7 +145,7 @@ export default function WaveCanvas({ className = '' }) {
       renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, []);
+  }, [apiRef, playingRef]);
 
   return <div ref={mountRef} className={className} aria-hidden="true" />;
 }

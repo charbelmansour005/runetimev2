@@ -739,7 +739,8 @@ textarea.cms-input--code {
 
 .cms-item.is-inactive .cms-item__index,
 .cms-item.is-inactive .cms-thumb,
-.cms-item.is-inactive .cms-swatch {
+.cms-item.is-inactive .cms-swatch,
+.cms-item.is-inactive .cms-initials {
   opacity: 0.45;
 }
 
@@ -1253,4 +1254,25 @@ textarea.cms-input--code {
   border-radius: 5px;
   object-fit: cover;
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* People (reviews): a round photo, or their initials. */
+.cms-thumb--round {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.cms-initials {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 50%;
+  background: #ece6ff;
+  color: #4d00f2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }

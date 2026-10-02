@@ -1,12 +1,14 @@
-import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import ErrorBoundary from '../ErrorBoundary';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
+import { POSTER_SIZES, POSTER_SRCSET } from './poster';
 import './Hero.css';
 
-// three.js is heavy, so the WebGL layers load after the copy has painted.
-const ParticleSculpture = lazy(() => import('./ParticleSculpture'));
+// three.js is heavy, so the WebGL layers start loading only once the poster
+// (the page's largest paint) is on screen and the browser is idle.
+const HeroScene = lazy(() => import('./HeroScene'));
 const WaveCanvas = lazy(() => import('./WaveCanvas'));
 
 const SLIDE_SECONDS = 8;
@@ -16,12 +18,41 @@ export default function Hero() {
   const { slides } = hero;
   const rootRef = useRef(null);
   const tabRefs = useRef([]);
-  const sculptureApi = useRef(null);
-  const activeRef = useRef(0);
+  const sceneApi = useRef(null);
+  const waveApi = useRef(null);
+  const playingRef = useRef(true);
   const controls = useRef({ go: () => {}, setPlaying: () => {} });
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [artReady, setArtReady] = useState(false);
+  const [webgl, setWebgl] = useState(false);
+  const posterRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let frame = 0;
+    let idle = 0;
+    const whenIdle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 200));
+    const cancelIdle = window.cancelIdleCallback ?? clearTimeout;
+    // decode() settles once the poster can paint (or has failed to load); two
+    // frames later it's on screen.
+    posterRef.current
+      .decode()
+      .catch(() => {})
+      .then(() => {
+        if (cancelled) return;
+        frame = requestAnimationFrame(() => {
+          frame = requestAnimationFrame(() => {
+            idle = whenIdle(() => setWebgl(true), { timeout: 1000 });
+          });
+        });
+      });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+      cancelIdle(idle);
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -38,7 +69,6 @@ export default function Hero() {
       const titles = q('.hero__title');
       const ctas = q('.hero__cta');
       const [slidesEl] = q('.hero__slides');
-      const [glow] = q('.hero__glow');
       const [progress] = q('.hero__progress-fill');
       const fills = q('.hero-tab__fill');
 
@@ -57,17 +87,15 @@ export default function Hero() {
         autoplay?.paused(held);
         progressTween?.paused(held);
         slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
+        // Pausing stops the 3D campus and the wave as well; hovering only
+        // holds the slide.
+        playingRef.current = !hold.user;
+        sceneApi.current?.setPlaying(!hold.user);
+        waveApi.current?.setPlaying(!hold.user);
       };
       setPlaying(!hold.user);
 
       gsap.set(slideEls, { autoAlpha: 0 });
-
-      // The particles start re-forming as soon as a slide is chosen.
-      const reshape = (i) => {
-        activeRef.current = i;
-        sculptureApi.current?.setSlide(i);
-        gsap.to(glow, { '--glow': slides[i].glow, duration: reduced ? 0 : 1.4, ease: 'power2.inOut' });
-      };
 
       const schedule = (i) => {
         gsap.set([progress, ...fills], { scaleX: 0 });
@@ -76,8 +104,8 @@ export default function Hero() {
         sync();
       };
 
-      // The headline leaves left and the next one sweeps in from the right
-      // while the particles burst apart and build the next shape.
+      // The headline leaves left and the next one sweeps in from the right.
+      // The 3D campus beside it stays as it is.
       function go(next) {
         if (next === current) return;
         if (busy) {
@@ -101,8 +129,6 @@ export default function Hero() {
             else schedule(next);
           },
         });
-
-        tl.add(() => reshape(next), 0);
 
         if (reduced) {
           if (prev >= 0) tl.to(slideEls[prev], { autoAlpha: 0, duration: 0.3 });
@@ -148,7 +174,7 @@ export default function Hero() {
       listen(root, 'focusout', (e) => !root.contains(e.relatedTarget) && holdFocus(false));
 
       if (!reduced) {
-        // Scroll parallax: the sculpture lags behind as the hero leaves.
+        // Scroll parallax: the campus lags behind as the hero leaves.
         const [parallax] = q('.hero__sculpture');
         let ticking = false;
         listen(
@@ -165,28 +191,16 @@ export default function Hero() {
           },
           { passive: true },
         );
-
-        // Mouse parallax: the sculpture drifts and turns towards the cursor,
-        // and its particles part around it.
-        const artX = gsap.quickTo(parallax, 'x', { duration: 0.9, ease: 'power3.out' });
-        listen(root, 'pointermove', (e) => {
-          if (e.pointerType === 'touch') return;
-          artX((e.clientX / window.innerWidth - 0.5) * 30);
-          sculptureApi.current?.setPointer(e.clientX, e.clientY);
-        });
-        listen(root, 'pointerleave', () => {
-          artX(0);
-          sculptureApi.current?.setPointer(null);
-        });
       }
 
       // Swipe between slides on touch screens (mostly-horizontal swipes only).
+      // Swipes on the 3D campus turn it instead.
       let touch = null;
       listen(
         root,
         'touchstart',
         (e) => {
-          touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          touch = e.target.closest('.hero-scene') ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
         },
         { passive: true },
       );
@@ -234,39 +248,15 @@ export default function Hero() {
         {brand.name}: {brand.tagline}
       </h1>
       <div className="hero__bg" aria-hidden="true" />
-      <ErrorBoundary>
-        <Suspense fallback={null}>
-          <WaveCanvas className="hero__wave" />
-        </Suspense>
-      </ErrorBoundary>
+      {webgl && (
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <WaveCanvas className="hero__wave" apiRef={waveApi} playingRef={playingRef} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
       <div className="hero__progress" aria-hidden="true">
         <span className="hero__progress-fill" />
-      </div>
-
-      <div className="hero__art" aria-hidden="true">
-        <div className="hero__sculpture">
-          <div className="hero__glow" />
-          {/* Shown until the WebGL particles take over, and kept without WebGL. */}
-          <img
-            className={`hero__poster${artReady ? ' is-hidden' : ''}`}
-            src="/hero-poster.webp"
-            alt=""
-            width="480"
-            height="480"
-            fetchPriority="high"
-            decoding="async"
-          />
-          <ErrorBoundary>
-            <Suspense fallback={null}>
-              <ParticleSculpture
-                apiRef={sculptureApi}
-                activeRef={activeRef}
-                slides={slides}
-                onReady={() => setArtReady(true)}
-              />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
       </div>
 
       <div className="hero__content container">
@@ -343,6 +333,33 @@ export default function Hero() {
               <span className="hero-tab__text">{slide.tabText}</span>
             </button>
           ))}
+        </div>
+      </div>
+      {/* Last in the markup, so keyboard users reach it after the slides; it
+          still sits under them on screen. */}
+      <div className="hero__art">
+        <div className="hero__sculpture">
+          <div className="hero__glow" aria-hidden="true" />
+          {/* Shown until the 3D campus takes over, and kept without WebGL. */}
+          <img
+            ref={posterRef}
+            className={`hero__poster${artReady ? ' is-hidden' : ''}`}
+            src="/hero-poster.webp"
+            srcSet={POSTER_SRCSET}
+            sizes={POSTER_SIZES}
+            alt=""
+            width="960"
+            height="803"
+            fetchPriority="high"
+            decoding="async"
+          />
+          {webgl && (
+            <ErrorBoundary>
+              <Suspense fallback={null}>
+                <HeroScene apiRef={sceneApi} playingRef={playingRef} onReady={() => setArtReady(true)} />
+              </Suspense>
+            </ErrorBoundary>
+          )}
         </div>
       </div>
     </section>

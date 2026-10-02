@@ -31,8 +31,8 @@
 
     <!-- The page waits for its CMS content, so fetch it while the app downloads. -->
     <link rel="preload" href="/api/content" as="fetch" crossorigin />
-    <!-- Hero art shown before the WebGL sculpture loads (home page only). -->
-    <link rel="preload" href="/hero-poster.webp" as="image" type="image/webp" />
+    <!-- Hero art shown before the 3D campus loads (home page only). -->
+    <link rel="preload" href="/hero-poster.webp" as="image" type="image/webp" fetchpriority="high" imagesrcset="/hero-poster-640.webp 640w, /hero-poster.webp 960w" imagesizes="(max-width: 900px) 79vw, (max-width: 1200px) 50vw, 47vw" />
     <!-- Dark from the first frame instead of a white flash before the CSS loads. -->
     <style>
       html {
@@ -68,7 +68,7 @@
       <div class="boot" aria-hidden="true">
         <div class="hero__art">
           <div class="hero__sculpture">
-            <img class="hero__poster" src="/hero-poster.webp" alt="" width="480" height="480" fetchpriority="high" />
+            <img class="hero__poster" src="/hero-poster.webp" srcset="/hero-poster-640.webp 640w, /hero-poster.webp 960w" sizes="(max-width: 900px) 79vw, (max-width: 1200px) 50vw, 47vw" alt="" width="960" height="803" fetchpriority="high" />
           </div>
         </div>
       </div>

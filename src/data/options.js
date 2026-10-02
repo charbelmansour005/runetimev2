@@ -1,16 +1,6 @@
 // Choices the CMS offers for fields that map to built-in visuals.
 // Shared by the site, the CMS forms and the API's validation.
 
-// The particle sculpture each hero slide forms (src/components/hero/shapes.js).
-export const HERO_SHAPE_OPTIONS = [
-  { value: 'neural', label: 'Neural network (AI)' },
-  { value: 'screens', label: 'App screens (web & mobile)' },
-  { value: 'globe', label: 'Globe with routes (global teams)' },
-  { value: 'infinity', label: 'Infinity loop (DevOps)' },
-  { value: 'helix', label: 'Double helix (data)' },
-  { value: 'blocks', label: 'Block cube (infrastructure)' },
-];
-
 export const GLYPH_OPTIONS = [
   { value: 'spark', label: '✦ Spark (AI)' },
   { value: 'code', label: '</> Code' },

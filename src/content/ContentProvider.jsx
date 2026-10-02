@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { defaultContent } from "../data/content";
+import { POSTER_SIZES, POSTER_SRCSET } from "../components/hero/poster";
 
 const ContentContext = createContext(defaultContent);
 // Generous enough for a cold serverless start; the site falls back after this.
@@ -57,9 +58,11 @@ export function ContentProvider({ children }) {
               <img
                 className="hero__poster"
                 src="/hero-poster.webp"
+                srcSet={POSTER_SRCSET}
+                sizes={POSTER_SIZES}
                 alt=""
-                width="480"
-                height="480"
+                width="960"
+                height="803"
                 fetchPriority="high"
               />
             </div>

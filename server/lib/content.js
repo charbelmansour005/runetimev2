@@ -14,13 +14,13 @@ export function serializeContent(doc) {
   return plain;
 }
 
-// What the public site gets: only active projects (ones saved before the
-// switch existed count as active), and articles as cards only, with a reading
-// time; an article's text loads on its own page.
+// Items with an Active switch that's on (ones saved before the switch existed
+// count as active), without the switch itself.
+const activeOnly = (items = []) => items.filter((item) => item.active !== false).map(({ active, ...item }) => item);
+
+// What the public site gets: only active projects and reviews, and articles
+// as cards only, with a reading time; an article's text loads on its own page.
 function toPublic(site) {
-  const projects = (site.work?.items ?? [])
-    .filter((item) => item.active !== false)
-    .map(({ active, ...item }) => item);
   const articles = new Map();
   const posts = (site.insights?.items ?? []).map(({ body = '', ...post }) => {
     if (!post.slug || !body) return { ...post, slug: '' };
@@ -29,7 +29,14 @@ function toPublic(site) {
     return card;
   });
   return {
-    content: { ...site, work: { ...site.work, items: projects }, insights: { ...site.insights, items: posts } },
+    content: {
+      ...site,
+      work: { ...site.work, items: activeOnly(site.work?.items) },
+      // Missing from a database saved before reviews existed; the site then
+      // uses its defaults.
+      ...(site.reviews && { reviews: { ...site.reviews, items: activeOnly(site.reviews.items) } }),
+      insights: { ...site.insights, items: posts },
+    },
     articles,
   };
 }

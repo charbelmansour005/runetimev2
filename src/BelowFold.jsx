@@ -6,6 +6,7 @@ import Solutions from './components/Solutions';
 import Work from './components/Work';
 import Stack from './components/Stack';
 import Numbers from './components/Numbers';
+import Reviews from './components/Reviews';
 import Insights from './components/Insights';
 import Contact from './components/Contact';
 
@@ -31,6 +32,7 @@ export default function BelowFold() {
       <Work />
       <Stack />
       <Numbers />
+      <Reviews />
       <Insights />
       <Contact />
     </>

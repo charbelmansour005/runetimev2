@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api';
-import { IconMail, IconRefresh, IconReply, IconTrash } from './icons';
+import { IconMail, IconPhone, IconRefresh, IconReply, IconTrash } from './icons';
 
 const when = (iso) =>
   new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
@@ -91,7 +91,7 @@ export default function Inbox({ onUnreadChange, notify }) {
                   <span className="cms-msg__dot" aria-label={msg.read ? undefined : 'Unread'} />
                   <span className="cms-msg__from">
                     <b>{msg.name}</b>
-                    <small>{msg.company ? `${msg.company} · ${msg.email}` : msg.email}</small>
+                    <small>{[msg.company, msg.email, msg.phone].filter(Boolean).join(' · ')}</small>
                   </span>
                   <span className="cms-msg__snippet">{msg.message}</span>
                   <time className="cms-msg__date" dateTime={msg.createdAt}>
@@ -108,6 +108,11 @@ export default function Inbox({ onUnreadChange, notify }) {
                       >
                         <IconReply /> Reply by email
                       </a>
+                      {msg.phone && (
+                        <a className="cms-btn" href={`tel:${msg.phone.replace(/[^\d+]/g, '')}`}>
+                          <IconPhone /> Call {msg.phone}
+                        </a>
+                      )}
                       <button type="button" className="cms-btn" onClick={() => setRead(msg, false)}>
                         Mark as unread
                       </button>

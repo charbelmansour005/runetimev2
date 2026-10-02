@@ -1,3 +1,5 @@
+*Update, October 2026: the particle sculpture mentioned here has been replaced by a 3D campus that stays the same on every slide. The pause button now stops it too, and with reduced motion it’s drawn once, standing still.*
+
 Auto-rotating carousels have a bad reputation, mostly earned. Text moves while you’re reading it, the controls are tiny, and keyboard and screen reader users get lost. We still wanted one: our hero has four slides, one for each thing we do, with a particle sculpture that changes shape for each.
 
 These are the changes that made it usable for everyone. Most of them are small.

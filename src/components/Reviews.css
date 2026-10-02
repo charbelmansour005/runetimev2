@@ -1,0 +1,180 @@
+.reviews__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.review-card {
+  --quote-size: 16px;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 24px 22px 22px;
+  border-radius: var(--radius-card);
+  background: var(--white);
+}
+
+/* Desktop: three cards to a row on a six-column grid. When the count doesn't
+   divide by three, the first row takes the remainder: one review left over is
+   shown large across the top, two share the first row. */
+@media (min-width: 1101px) {
+  .reviews__grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 28px;
+  }
+
+  .review-card {
+    --quote-size: 17px;
+    grid-column: span 2;
+    padding: 30px 30px 28px;
+  }
+
+  .review-card:first-child:nth-last-child(3n + 2),
+  .review-card:first-child:nth-last-child(3n + 2) + .review-card {
+    grid-column: span 3;
+  }
+
+  .review-card:first-child:nth-last-child(3n + 1) {
+    --quote-size: 21px;
+    grid-column: 1 / -1;
+  }
+}
+
+/* Tablet: two to a row, and an odd one out goes large across the top. */
+@media (min-width: 769px) and (max-width: 1100px) {
+  .reviews__grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+
+  .review-card {
+    --quote-size: 17px;
+    padding: 28px 26px 26px;
+  }
+
+  .review-card:first-child:nth-last-child(odd) {
+    --quote-size: 19px;
+    grid-column: 1 / -1;
+  }
+}
+
+.review-card__mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 20px;
+}
+
+.review-card__mark .shard {
+  left: 6px;
+  top: 2px;
+  width: 38px;
+  height: 50px;
+  transform: rotate(-20deg);
+}
+
+/* Drawn as a closing mark; turned around, it opens the quote. */
+.review-card__mark svg {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  fill: var(--violet);
+  transform: rotate(180deg);
+}
+
+.review-card__quote {
+  flex: 1;
+  margin: 0;
+}
+
+.review-card__quote p {
+  max-width: 880px;
+  color: var(--ink-700);
+  font-size: var(--quote-size);
+  line-height: 1.7;
+}
+
+.review-card__quote strong {
+  color: var(--ink-900);
+  font-weight: 600;
+  background: linear-gradient(transparent 62%, var(--lilac-soft) 62%);
+}
+
+.review-card__person {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(14, 14, 14, 0.08);
+}
+
+.review-card__avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--lilac-soft);
+  color: var(--violet);
+  font-size: 15px;
+  font-weight: 700;
+  object-fit: cover;
+}
+
+.review-card__who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.review-card__name {
+  color: var(--ink-700);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.3px;
+}
+
+.review-card__role {
+  color: var(--ink-500);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.review-card__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 16px;
+  color: var(--violet);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.review-card__source:hover {
+  color: var(--violet-deep);
+  text-decoration: underline;
+}
+
+.review-card__source svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (pointer: coarse) {
+  .review-card__source {
+    min-height: 44px;
+  }
+}

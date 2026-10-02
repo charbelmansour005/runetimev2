@@ -24,3 +24,15 @@ export function linkProps(url, fallback) {
 }
 
 export const itemKey = (item, index) => item._id ?? index;
+
+// "Sarah Khoury" → "SK": stands in for a missing photo.
+export function initials(name) {
+  const words = String(name ?? '')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return '';
+  const first = (word) => Array.from(word)[0];
+  return (first(words[0]) + (words.length > 1 ? first(words[words.length - 1]) : '')).toUpperCase();
+}

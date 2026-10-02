@@ -12,10 +12,11 @@ format so people and AI agents can extend the site without drifting from it. Tok
 - **Mood:** a senior engineering studio. Confident, technical and calm, never playful or mystical.
 - **Signature contrast:** near-black violet heroes and dark bands (`--void`, `--grad-dark`)
   alternate with white and mist content sections.
-- **Hero:** a WebGL *particle sculpture*. Thousands of points form a different shape per slide
-  (neural network, app screens, globe, infinity loop, double helix, block cube) and swirl into the
-  next one. It sits above a violet→coral wireframe wave. It represents "a collective of points
-  forming one product".
+- **Hero:** a 3D *miniature campus* at night, built in code with three.js: an AI lab with a neural
+  network under a glass dome, an office tower with a hologram globe, an app studio with a giant phone
+  and a browser billboard, and a server hall under a cloud, all around a monorail that runs an endless
+  ∞ loop ("built to run"). It's the same on every slide (only the headline changes), and visitors can
+  turn it and zoom in. It sits above a violet→coral wireframe wave.
 - **Signature shape:** the angular *shard* (a six-point polygon from the logo's geometry). Use it
   for small accents (icon backs, card corners, decorative layers), never as the main artwork.
 - **Density:** generous. Sections breathe (100px vertical padding on desktop) and copy stays in short
@@ -103,6 +104,11 @@ at least 44px tall on coarse pointers.
   written in the CMS, reading time). Clickable only when there's an article page or a link.
 - Work tiles: 4:3, full-bleed colour, device mockup or screenshot, caption on a dark scrim. A tile is a
   link only when a case study URL exists.
+- Review cards: white on mist, `--radius-card`, a violet quote mark on a lilac shard, the quote at
+  17px/1.7 (`**bold**` gets a lilac highlighter), then a hairline and the person: a 48px round photo or
+  their initials on `--lilac-soft`, name 16px/700, role and company 14px. Three to a row; a count that
+  doesn't divide by three puts the remainder in the first row (one left over is shown large across the
+  top). An optional "View on LinkedIn ↗" link names the site it points to.
 
 **Article page (`/insights/<slug>`).**
 - Dark page-hero band: breadcrumb, then category pill (lilac outline), date and reading time, then the
@@ -129,6 +135,8 @@ at least 44px tall on coarse pointers.
   focus returns to the menu button on close.
 
 **Forms (contact).**
+- Fields: name, email and phone (all required, phone with a "country code" hint), company (optional)
+  and the message.
 - Fields: dark glass with 36%-white borders (3:1), radius 10px and 16px text.
 - Focus: violet border plus a 3px violet halo (with a transparent outline for forced colours).
 - Errors appear per field (`aria-invalid` plus `aria-describedby`) and as a summary with
@@ -137,12 +145,21 @@ at least 44px tall on coarse pointers.
 **Shard.** `.shard` with a `--shard-a`/`--shard-b` gradient. Variants: ink, white, lilac, pink,
 lavender, ice, aqua.
 
-**Particle sculpture.**
-- One `THREE.Points` draw with a custom shader and additive blending.
-- Each slide's `shape`, `from`/`to` colours and `glow` come from the CMS.
-- Morph: 1.9s, staggered bottom to top, with a swirl and outward billow mid-flight.
-- A static poster (`/hero-poster.webp`) is shown until the first WebGL frame, and stays on screen
-  without WebGL or with Data Saver on.
+**3D campus (hero).**
+- Built from rounded boxes, cylinders and swept paths (`src/components/hero/scene/`); everything that
+  doesn't move is merged into one mesh per material: about 100 draw calls a frame, shadows included.
+- Palette: off-white and lilac buildings, teal and blossom-pink trees, warm lit windows, and
+  `--violet-light` accents (the slab's seam and the monorail's light strips).
+- Moving parts: the monorail, cars, a drone, fans, a satellite dish, the neural network's pulses, the
+  hologram's routes, server lights, data going up to the cloud, the phone's scrolling feed and the
+  billboard's chart. All of it stops with the hero's pause button and with reduced motion.
+- Drag to turn it (all the way round), scroll or pinch to zoom towards the cursor, double-click or Home
+  to reset, arrow keys and +/− when it has focus. It never traps the page: at full zoom-out the wheel
+  scrolls the page, once the page has scrolled it always does, and on touch screens vertical drags
+  scroll. A "Drag to turn" hint shows until the first interaction.
+- A poster (`/hero-poster.webp`, rendered from the scene by `scripts/render-poster.mjs`) is shown
+  until the first WebGL frame and lines up with it; it stays without WebGL or with Data Saver on.
+  three.js starts loading only after the poster has painted.
 
 ## 5. Layout Principles
 
@@ -188,7 +205,7 @@ There's no elevation scale yet. The site has 24 distinct one-off shadows. Use th
   100% client retention and 100K+ monthly users.
 - Give every carousel or auto-advancing element a pause control, and pause it on hover and keyboard focus.
 - Respect `prefers-reduced-motion`: no autoplay, no parallax, and static WebGL frames.
-- Lazy-load heavy visuals. three.js loads only for the hero, after the first paint.
+- Lazy-load heavy visuals. three.js loads only for the hero, after the poster has painted.
 - Use tokens. Extend `tokens.css` rather than hard-coding colours. There are 165 literal colours
   today, mostly inside mockups.
 

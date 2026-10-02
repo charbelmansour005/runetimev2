@@ -27,7 +27,7 @@
 }
 
 .hero__wave canvas,
-.particle-sculpture canvas {
+.hero-scene canvas {
   width: 100%;
   height: 100%;
 }
@@ -48,7 +48,7 @@
   transform-origin: left center;
 }
 
-/* ---------- Art: particle sculpture ---------- */
+/* ---------- Art: the 3D campus ---------- */
 
 .hero__art {
   position: absolute;
@@ -60,17 +60,106 @@
 }
 
 .hero__sculpture,
-.particle-sculpture {
+.hero-scene,
+.hero-scene__canvas {
   position: absolute;
   inset: 0;
 }
 
-/* Soft light behind the particles, tinted per slide. */
+/* The poster below is sized against this box, like the 3D scene's camera. */
+.hero__sculpture {
+  container-type: size;
+}
+
+/* Visitors can turn the campus by dragging and zoom it with the wheel or a
+   pinch. On touch screens, vertical drags still scroll the page. */
+.hero-scene.is-ready .hero-scene__canvas {
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+/* Zoomed in, the campus fades out towards the headline and under the header
+   instead of ending in a hard edge. */
+.hero-scene__canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent 8%, #000 19%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent 8%, #000 19%);
+  mask-composite: intersect;
+}
+
+.hero-scene__canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.hero-scene:focus-visible {
+  outline: 2px solid var(--violet-light);
+  outline-offset: -8px;
+  border-radius: 24px;
+}
+
+.hero-scene__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 168px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 10px;
+  border: 1px solid var(--glass-stroke);
+  border-radius: 999px;
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+  animation: hero-hint-in 0.6s 0.8s var(--ease-out-3) both;
+  transition: opacity 0.4s;
+}
+
+.hero-scene.is-touched .hero-scene__hint {
+  opacity: 0;
+}
+
+.hero-scene__hint svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+@keyframes hero-hint-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+}
+
+@media (hover: hover) {
+  .hero-scene__hint-touch {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .hero-scene__hint-mouse {
+    display: none;
+  }
+}
+
+/* Soft light behind the campus. */
 .hero__glow {
   --glow: #8b6bff;
   position: absolute;
   left: 50%;
-  top: 47%;
+  top: 45%;
   width: min(80%, 84vh);
   aspect-ratio: 1;
   border-radius: 50%;
@@ -83,12 +172,16 @@
   );
 }
 
-/* Static particle cloud shown until the WebGL sculpture is ready. */
+/* A still of the campus, shown until the WebGL scene is ready. It's centred
+   where the scene's camera aims (45% down) and scales the way the camera
+   frames the campus: with the width of the box, or its height once the box is
+   wider than 0.95 : 1. Rendered by the scene itself, so the two line up. */
 .hero__poster {
   position: absolute;
   left: 50%;
-  top: 47%;
-  width: min(80%, 84vh);
+  top: 45%;
+  width: 79%;
+  width: min(78.9cqw, 74.7cqh);
   height: auto;
   max-width: none;
   transform: translate(-50%, -50%);
@@ -116,6 +209,12 @@
 .hero__slides {
   display: grid;
   width: 100%;
+}
+
+/* Only the words and the button take the pointer: the space around them
+   belongs to the campus behind, so it can be dragged. */
+.hero__line,
+.hero__cta {
   pointer-events: auto;
 }
 
@@ -135,6 +234,7 @@
 
 .hero__line {
   display: block;
+  width: fit-content;
 }
 
 /* ---------- Glass tab bar ---------- */
@@ -269,10 +369,21 @@
     width: 100%;
   }
 
-  /* The sculpture sits above the headline, which moves to the bottom. */
+  /* The campus sits above the headline, which moves to the bottom. */
   .hero__sculpture {
     top: calc(var(--header-h) - 12px);
     bottom: 40%;
+  }
+
+  /* Above the campus here: the headline fills the space below it. */
+  .hero-scene__hint {
+    top: 6px;
+    bottom: auto;
+  }
+
+  .hero-scene__canvas {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent);
   }
 
   .hero__content {

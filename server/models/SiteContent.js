@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import {
   GLYPH_OPTIONS,
-  HERO_SHAPE_OPTIONS,
   INDUSTRY_VISUAL_OPTIONS,
   SERVICE_ICON_OPTIONS,
   SOCIAL_ICON_OPTIONS,
@@ -11,6 +10,7 @@ import {
   WORK_TAG_OPTIONS,
   optionValues,
 } from '../../src/data/options.js';
+import { defaultContent } from '../../src/data/content.js';
 import { SLUG_MAX, SLUG_PATTERN, slugify } from '../../src/data/insights.js';
 import { MEDIA_URL_PATTERN } from './Media.js';
 import { EMAIL_PATTERN } from './Message.js';
@@ -91,10 +91,6 @@ const slideSchema = new Schema({
   headline: lines({ min: 1, max: 5, maxLength: 40, label: 'headline lines' }),
   tabTitle: text(40),
   tabText: text(90),
-  shape: oneOf(HERO_SHAPE_OPTIONS),
-  from: color,
-  to: color,
-  glow: color,
 });
 
 const serviceSchema = new Schema({
@@ -145,6 +141,18 @@ const statSchema = new Schema({
   label: text(60),
 });
 
+// A client's words, published with their OK. Like projects, an inactive
+// review stays in the CMS but isn't shown on the site.
+const reviewSchema = new Schema({
+  quote: text(700),
+  name: text(60),
+  role: text(80, { required: false }),
+  company: text(80, { required: false }),
+  photo: image,
+  url: link,
+  active: { type: Boolean, default: true },
+});
+
 // An article is either written here (`body`, shown at /insights/<slug>) or a
 // link to a post elsewhere (`url`).
 const insightSchema = new Schema({
@@ -189,6 +197,7 @@ export const SECTION_KEYS = [
   'work',
   'stack',
   'numbers',
+  'reviews',
   'insights',
   'contact',
 ];
@@ -240,6 +249,16 @@ const siteContentSchema = new Schema(
       intro: text(400, { required: false }),
       items: list(statSchema, { min: 1, max: 12 }),
     }),
+    // Added after launch: a database saved before then gets the defaults
+    // (no reviews) when the CMS reads it.
+    reviews: {
+      type: section({
+        title: text(80),
+        intro: text(400, { required: false }),
+        items: list(reviewSchema, { min: 0, max: 12 }),
+      }),
+      default: () => ({ ...defaultContent.reviews, items: [] }),
+    },
     insights: section({
       title: text(80),
       intro: text(400, { required: false }),

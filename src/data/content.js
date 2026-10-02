@@ -21,46 +21,27 @@ export const defaultContent = {
     ],
   },
 
-  // `shape` is what the hero's particles form on each slide (see
-  // HERO_SHAPE_OPTIONS); `from`/`to` colour them top to bottom and `glow`
-  // tints the light behind them.
   hero: {
     slides: [
       {
         headline: ['Software & AI', 'Engineering,', 'Built to Run'],
         tabTitle: 'AI & Machine Learning',
         tabText: 'Shipping intelligent features into real products',
-        shape: 'neural',
-        glow: '#E36BFF',
-        from: '#F08BF5',
-        to: '#F7A8B8',
       },
       {
         headline: ['Custom Mobile', '& Web App', 'Development'],
         tabTitle: 'Web & Mobile Apps',
         tabText: 'Native, cross-platform and web apps built to scale',
-        shape: 'screens',
-        glow: '#8B6BFF',
-        from: '#C7B8FA',
-        to: '#7C6CF0',
       },
       {
         headline: ['Dedicated', 'Engineering', 'Teams for', 'Global Clients'],
         tabTitle: 'Dedicated Teams',
         tabText: 'A senior collective that plugs into your roadmap',
-        shape: 'globe',
-        glow: '#5AB8FF',
-        from: '#A8C8F5',
-        to: '#7EE0F0',
       },
       {
         headline: ['Cloud & DevOps', 'Platforms That', 'Never Sleep'],
         tabTitle: 'Cloud & DevOps',
         tabText: 'Infrastructure that keeps your runtime up',
-        shape: 'infinity',
-        glow: '#2EE6C8',
-        from: '#7DD3FC',
-        to: '#2DD4BF',
       },
     ],
   },
@@ -247,6 +228,14 @@ export const defaultContent = {
     ],
   },
 
+  // Real reviews only, added in the CMS with the client's OK. The section is
+  // hidden while there are none.
+  reviews: {
+    title: 'What Our Clients Say',
+    intro: 'What it’s like to work with us, in the words of the people who have.',
+    items: [],
+  },
+
   // The articles' text is in src/data/insights/<slug>.md; seeding the database
   // adds it (server/lib/defaults.js), and the site loads it per article.
   insights: {
@@ -269,7 +258,7 @@ export const defaultContent = {
         date: '2026-10-01',
         tag: 'Engineering',
         summary:
-          'Our hero is a cloud of particles that rebuilds itself into a new shape for every slide. How we generate the shapes, morph them on the GPU and keep it from slowing the page down.',
+          'Our hero was a cloud of particles that rebuilt itself into a new shape for every slide. How we generated the shapes, morphed them on the GPU and kept it from slowing the page down.',
         url: '',
         art: { from: '#2A0A6B', to: '#6D28FF', glow: '#F08BF5', glyph: 'spark' },
       },

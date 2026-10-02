@@ -32,21 +32,23 @@ Requires Node 18+. (Vite 6, Mongoose 8 and concurrently 9 are pinned for Node 18
 
 ## The CMS
 
-Every section of the page is editable: hero slides (headline, tab text, particle shape and colours),
-About, Services, Industries, Solutions, Selected work, Tech stack, Numbers, Insights, Contact,
+Every section of the page is editable: hero slides (headline and tab text), About, Services,
+Industries, Solutions, Selected work, Tech stack, Numbers, Client reviews, Insights, Contact,
 brand/social links and SEO. Lists can be reordered, duplicated and removed; changes go live as
 soon as you press **Save** (or ⌘/Ctrl + S). Invalid input is rejected by the API with a message
 pointing at the field.
 
-**Selected work** projects have an **Active** switch: turn it off to hide a project from the site
-without deleting it (the API leaves inactive projects out of the public content).
+**Selected work** projects and **Client reviews** have an **Active** switch: turn it off to hide one
+from the site without deleting it (the API leaves inactive items out of the public content). The
+reviews section stays hidden until there's at least one active review. Only publish a review with
+the client's OK.
 
 **Insights** articles are written in the CMS in Markdown, and each gets its own page at
 `/insights/<web address>` (made from the title if you leave it empty). An article without text can
 link to a post published elsewhere instead.
 
-The **Inbox** collects messages sent through the contact form on the site (spam is filtered with
-a honeypot field and rate limiting).
+The **Inbox** collects messages sent through the contact form on the site, each with the sender's
+phone number (required) and a Call button. Spam is filtered with a honeypot field and rate limiting.
 
 ## Deploying
 
@@ -103,7 +105,9 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
   `src/data/insights/<slug>.md` — the default articles' text, added when the database is seeded
   (`server/lib/defaults.js`); `src/data/insights.js` — article helpers shared by the site, CMS and API.
 - `src/content/` — loads content from the API for the site.
-- `src/components/` — site sections; `src/components/hero/` — slider, WebGL particle sculpture (`shapes.js` defines the formations) and wave.
+- `src/components/` — site sections; `src/components/hero/` — slider, wave and the 3D campus
+  (`HeroScene.jsx`; `scene/campus.js` builds the model in code, `scene/orbit.js` handles drag, wheel,
+  pinch and keyboard).
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
 - `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config. Only real pages
@@ -117,7 +121,10 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `vite.config.js` — besides the build, it writes `insights.html` and `admin.html` (each with its own
   title, description, canonical and Open Graph tags) and `robots.txt`, using the production domain
   (`VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override; see `server/lib/html.js`).
-- `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's static poster.
+- `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's poster
+  (`hero-poster.webp` and `hero-poster-640.webp`): a still of the 3D campus at its starting view, shown
+  until WebGL draws it. Whenever the campus or its lighting changes, re-render it with the site running
+  locally: `npx -p puppeteer-core node scripts/render-poster.mjs`.
 - `DESIGN.md` — the design system (tokens, type, components, do's and don'ts). Read it before adding UI.
 
 ## Security notes

@@ -4,7 +4,7 @@ import { Check } from './Icons';
 import { useContent } from '../content/ContentProvider';
 import './Contact.css';
 
-const FIELDS = ['name', 'email', 'company', 'message'];
+const FIELDS = ['name', 'email', 'phone', 'company', 'message'];
 
 class SendError extends Error {
   constructor(message, fields = {}) {
@@ -142,13 +142,31 @@ export default function Contact() {
                   {fieldError('email')}
                 </label>
               </div>
-              <label className="contact-form__field">
-                <span>
-                  Company <em>(optional)</em>
-                </span>
-                <input name="company" maxLength={120} autoComplete="organization" {...describe('company')} />
-                {fieldError('company')}
-              </label>
+              <div className="contact-form__row">
+                <label className="contact-form__field">
+                  <span>Phone</span>
+                  <input
+                    name="phone"
+                    type="tel"
+                    required
+                    maxLength={30}
+                    pattern="\+?[0-9 \(\)\.\/\-]{7,30}"
+                    autoComplete="tel"
+                    {...describe('phone', 'contact-phone-hint')}
+                  />
+                  <span className="contact-form__hint" id="contact-phone-hint">
+                    Include the country code.
+                  </span>
+                  {fieldError('phone')}
+                </label>
+                <label className="contact-form__field">
+                  <span>
+                    Company <em>(optional)</em>
+                  </span>
+                  <input name="company" maxLength={120} autoComplete="organization" {...describe('company')} />
+                  {fieldError('company')}
+                </label>
+              </div>
               <label className="contact-form__field">
                 <span>What are you building?</span>
                 <textarea

@@ -49,12 +49,13 @@ router.get('/media/:id', requireDb, async (req, res) => {
 });
 
 router.post('/contact', contactLimiter, requireDb, async (req, res) => {
-  const { name, email, company, message, referral_code: trap } = req.body ?? {};
+  const { name, email, phone, company, message, referral_code: trap } = req.body ?? {};
   // A hidden spam-trap field: people never see it, bots fill it in.
   if (trap) return res.status(201).json({ ok: true });
   await Message.create({
     name: String(name ?? ''),
     email: String(email ?? ''),
+    phone: String(phone ?? ''),
     company: String(company ?? ''),
     message: String(message ?? ''),
   });

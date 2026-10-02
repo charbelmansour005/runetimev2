@@ -1,3 +1,5 @@
+*Update, October 2026: our hero is now a 3D model of a small campus that you can turn and zoom. This post describes the particle sculpture it replaced.*
+
 The hero on our home page is a sculpture made of particles. Each slide has its own shape: a neural network, a fan of app screens, a globe with routes, an infinity loop. When the slide changes, the particles burst apart, swirl and rebuild into the next shape. Which shape each slide uses, and its colours, are settings in our CMS, with a double helix and a cube of blocks to choose from as well.
 
 This is how it works, and what we did to keep it from slowing the page down.

@@ -1,6 +1,5 @@
 import {
   GLYPH_OPTIONS,
-  HERO_SHAPE_OPTIONS,
   INDUSTRY_VISUAL_OPTIONS,
   SERVICE_ICON_OPTIONS,
   SOCIAL_ICON_OPTIONS,
@@ -9,6 +8,7 @@ import {
   WORK_DEVICE_OPTIONS,
   WORK_TAG_OPTIONS,
 } from '../data/options';
+import { initials } from '../content/format';
 
 // Describes every editable section of the site. The CMS renders its forms
 // from this; the API validates the same shapes (server/models/SiteContent.js).
@@ -43,7 +43,7 @@ export const SECTIONS = [
     group: 'Home page',
     label: 'Hero slider',
     description:
-      'The rotating slides at the top of the page. Each slide has a headline, a tab in the bar at the bottom, and the shape its particles form, with colours.',
+      'The rotating slides at the top of the page. Each slide has a headline and a tab in the bar at the bottom; the 3D campus beside them stays the same on every slide.',
     fields: [
       {
         name: 'slides',
@@ -53,15 +53,10 @@ export const SECTIONS = [
         minItems: 1,
         maxItems: 6,
         summary: (s) => s.headline?.filter(Boolean).join(' '),
-        preview: (s) => gradientSwatch(s.from, s.to),
         newItem: () => ({
           headline: ['New headline'],
           tabTitle: 'New tab',
           tabText: 'One line describing this slide',
-          shape: 'globe',
-          glow: '#8B6BFF',
-          from: '#C7B8FA',
-          to: '#7C6CF0',
         }),
         fields: [
           {
@@ -76,10 +71,6 @@ export const SECTIONS = [
           },
           { name: 'tabTitle', type: 'text', label: 'Tab title', max: 40, width: 'half' },
           { name: 'tabText', type: 'text', label: 'Tab text', max: 90, width: 'half' },
-          { name: 'shape', type: 'select', label: 'Particle shape', options: HERO_SHAPE_OPTIONS, width: 'half' },
-          { name: 'from', type: 'color', label: 'Particle colour (top)', width: 'third' },
-          { name: 'to', type: 'color', label: 'Particle colour (bottom)', width: 'third' },
-          { name: 'glow', type: 'color', label: 'Glow behind', width: 'third' },
         ],
       },
     ],
@@ -318,6 +309,70 @@ export const SECTIONS = [
             help: '120+, 98% or 1M+ count up on scroll; anything else (like 24/7) is shown as written.',
           },
           { name: 'label', type: 'text', label: 'Label', max: 60, width: 'third' },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'reviews',
+    group: 'Home page',
+    label: 'Client reviews',
+    description:
+      'Quotes from clients, shown after the Numbers section. Only publish a review with the client’s OK, in their own words. Turn off a review’s Active switch to hide it without deleting it. With no active reviews, the section is hidden.',
+    fields: [
+      sectionTitle,
+      sectionIntro,
+      {
+        name: 'items',
+        type: 'list',
+        label: 'Reviews',
+        itemLabel: 'review',
+        minItems: 0,
+        maxItems: 12,
+        status: 'active',
+        summary: (r) => [r.name, r.company].filter(Boolean).join(', '),
+        preview: (r) =>
+          r.photo ? (
+            <img className="cms-thumb cms-thumb--round" src={r.photo} alt="" />
+          ) : (
+            <span className="cms-initials">{initials(r.name)}</span>
+          ),
+        newItem: () => ({ quote: '', name: '', role: '', company: '', photo: '', url: '', active: true }),
+        fields: [
+          {
+            name: 'quote',
+            type: 'textarea',
+            label: 'Review',
+            max: 700,
+            rows: 4,
+            help: 'Wrap words in **double asterisks** to highlight them. Short reviews (under about 60 words) read best.',
+          },
+          {
+            name: 'name',
+            type: 'text',
+            label: 'Name',
+            max: 60,
+            width: 'third',
+            help: 'As the client is happy to have it shown, like “Sarah K.”',
+          },
+          { name: 'role', type: 'text', label: 'Role', max: 80, width: 'third', placeholder: 'Founder (optional)' },
+          { name: 'company', type: 'text', label: 'Company', max: 80, width: 'third', placeholder: 'Optional' },
+          {
+            name: 'photo',
+            type: 'image',
+            maxSize: 240,
+            label: 'Photo',
+            help: 'Optional. Without one, the client’s initials are shown.',
+          },
+          {
+            name: 'url',
+            type: 'text',
+            inputType: 'url',
+            label: 'Link to the original review',
+            max: 500,
+            placeholder: 'https://… (optional)',
+            help: 'If the review was also posted online, like a LinkedIn recommendation.',
+          },
         ],
       },
     ],
