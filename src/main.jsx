@@ -7,11 +7,15 @@ import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import InsightsPage from './pages/InsightsPage.jsx';
 import { ContentProvider } from './content/ContentProvider.jsx';
+import { installSmoothScroll } from './smoothScroll.js';
 
 // The CMS lives at /admin and is only downloaded when someone opens it.
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
 const isAdmin = /^\/admin(\/|$)/.test(window.location.pathname);
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
+
+// The site's wheel scrolling glides; the CMS keeps the browser's own.
+if (!isAdmin) installSmoothScroll();
 
 // Articles (/insights/<slug>) are their own chunk, fetched straight away on
 // an article's page, alongside the site content.

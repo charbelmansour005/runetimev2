@@ -111,6 +111,8 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `src/components/` — site sections; `src/components/hero/` — slider, wave and the 3D campus
   (`HeroScene.jsx`; `scene/campus.js` builds the model in code, `scene/orbit.js` handles drag, wheel,
   pinch and keyboard).
+- `src/smoothScroll.js` — the site's wheel scrolling: it glides to where the wheel sends it, with a top speed
+  (`MAX_SPEED`). Touch, keyboard and scrollbar scrolling are the browser's own, as is everything with reduced motion.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
 - `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config. Only real pages

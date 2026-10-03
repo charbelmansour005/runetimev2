@@ -12,6 +12,12 @@ const ZOOM = [0.38, 1];
 // How far the camera's target may wander when zooming in on a spot.
 const REACH = { x: 3.8, z: 3.0 };
 
+// Wheel zoom: the most one wheel event counts for (pixels), how far the zoom
+// may be sent ahead of the view (a ratio), and the pause that ends a turn (ms).
+const NOTCH = 120;
+const LEAD = 1.3;
+const GESTURE_GAP = 180;
+
 const clamp = THREE.MathUtils.clamp;
 
 export function createOrbit({ element, camera, reduced, onInput }) {
@@ -53,16 +59,28 @@ export function createOrbit({ element, camera, reduced, onInput }) {
     goal.zoom = zoom;
   }
 
+  // The wheel moves the zoom at most one notch per event and never more than
+  // LEAD ahead of what's on screen, so a fast wheel can't fling the camera.
+  let zoomedAt = -Infinity;
   const onWheel = (e) => {
     const zoomingOut = e.deltaY > 0;
     if (!e.ctrlKey) {
       if (window.scrollY > 4) return; // the page is scrolling: let it
-      if (zoomingOut && goal.zoom >= ZOOM[1] - 0.001) return; // fully out: scroll the page
+      if (zoomingOut && goal.zoom >= ZOOM[1] - 0.001) {
+        // Fully out: scroll the page. The tail of the turn that zoomed out
+        // is dropped first, so the page doesn't lurch as the zoom ends.
+        if (e.timeStamp - zoomedAt > GESTURE_GAP) return;
+        zoomedAt = e.timeStamp;
+        e.preventDefault();
+        return;
+      }
     }
     e.preventDefault();
-    const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    zoomedAt = e.timeStamp;
+    const pixels = clamp(e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1), -NOTCH, NOTCH);
     // Trackpad pinches arrive as ctrl + wheel with small deltas.
-    zoomTo(goal.zoom * Math.exp(pixels * (e.ctrlKey ? 0.01 : 0.0015)), pointAt(e.clientX, e.clientY));
+    const next = goal.zoom * Math.exp(pixels * (e.ctrlKey ? 0.01 : 0.0012));
+    zoomTo(clamp(next, state.zoom / LEAD, state.zoom * LEAD), pointAt(e.clientX, e.clientY));
     input();
   };
 
@@ -158,10 +176,13 @@ export function createOrbit({ element, camera, reduced, onInput }) {
         spin *= Math.exp(-dt * 3.5);
         if (Math.abs(spin) < 1) spin = 0;
       }
-      const k = reduced ? 1 : 1 - Math.exp(-dt * 9);
+      // Turning follows the hand closely; zooming glides.
+      const turn = reduced ? 1 : 1 - Math.exp(-dt * 9);
+      const glide = reduced ? 1 : 1 - Math.exp(-dt * 6);
       let moving = spin !== 0 || pointers.size > 0;
       for (const key of Object.keys(goal)) {
         const gap = goal[key] - state[key];
+        const k = key === 'az' || key === 'el' ? turn : glide;
         state[key] = Math.abs(gap) < 1e-4 ? goal[key] : state[key] + gap * k;
         if (Math.abs(gap) > 1e-3) moving = true;
       }
