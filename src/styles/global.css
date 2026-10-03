@@ -10,6 +10,42 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* The page's scrollbar: a violet pill on the hero's dark. Chrome, Edge and
+   Safari take the ::-webkit- rules; Firefox takes the two standard properties
+   (kept apart, because Chrome would drop the ::-webkit- styling for them). */
+html::-webkit-scrollbar {
+  width: 12px;
+}
+
+html::-webkit-scrollbar-track {
+  background: var(--void);
+}
+
+html::-webkit-scrollbar-thumb {
+  border: 3px solid var(--void);
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--violet-light), var(--violet));
+}
+
+html::-webkit-scrollbar-thumb:hover,
+html::-webkit-scrollbar-thumb:active {
+  border-width: 2px;
+  background: linear-gradient(180deg, var(--lilac), var(--violet-light));
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: var(--violet-light) var(--void);
+    scrollbar-width: thin;
+  }
+}
+
+@media (forced-colors: active) {
+  html::-webkit-scrollbar-thumb {
+    background: CanvasText;
+  }
+}
+
 body {
   margin: 0;
   font-family: var(--font);
