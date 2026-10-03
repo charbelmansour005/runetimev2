@@ -42,7 +42,7 @@
 
 /* ---------- Archive ---------- */
 
-.insights-archive__filters {
+.archive-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;

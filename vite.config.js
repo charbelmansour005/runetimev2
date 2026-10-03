@@ -11,9 +11,30 @@ const withoutHeroArt = (html) =>
     .replace(/\s*<!-- Hero art[^>]*-->\s*<link rel="preload" href="\/hero-poster\.webp"[^>]*>/, '')
     .replace(/\s*<!-- Loading screen[^>]*-->[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/, '\n      <div class="boot" aria-hidden="true"></div>');
 
+// <link> tags that fetch a lazy page's code (and what it imports) and styles
+// alongside the main bundle, instead of after it has run.
+function pagePreloads(bundle, page) {
+  const chunks = Object.values(bundle).filter((file) => file.type === 'chunk');
+  const entry = chunks.find((chunk) => chunk.facadeModuleId?.endsWith(`/src/pages/${page}.jsx`));
+  if (!entry) return '';
+  const wanted = [entry];
+  for (const chunk of wanted) {
+    for (const name of chunk.imports) {
+      const dep = bundle[name];
+      if (dep?.type === 'chunk' && !dep.isEntry && !wanted.includes(dep)) wanted.push(dep);
+    }
+  }
+  const css = new Set(wanted.flatMap((chunk) => [...(chunk.viteMetadata?.importedCss ?? [])]));
+  return [
+    ...wanted.map((chunk) => `<link rel="modulepreload" crossorigin href="/${chunk.fileName}">`),
+    ...[...css].map((file) => `<link rel="preload" as="style" crossorigin href="/${file}">`),
+  ].join('\n    ');
+}
+
 function siteMeta() {
   let outDir = 'dist';
   let articleAssets = '';
+  let workAssets = '';
   return {
     name: 'site-meta',
     configResolved(config) {
@@ -40,16 +61,9 @@ function siteMeta() {
       // Preloads for the article page's code. Article pages are built from
       // insights.html, where these wait in a comment that the API switches on
       // (server/routes/pages.js), so they load alongside the main bundle.
-      const article = Object.values(bundle).find(
-        (file) => file.type === 'chunk' && file.facadeModuleId?.endsWith('/src/pages/ArticlePage.jsx'),
-      );
-      if (article) {
-        const css = [...(article.viteMetadata?.importedCss ?? [])];
-        articleAssets = [
-          `<link rel="modulepreload" crossorigin href="/${article.fileName}">`,
-          ...css.map((file) => `<link rel="preload" as="style" crossorigin href="/${file}">`),
-        ].join('\n    ');
-      }
+      articleAssets = pagePreloads(bundle, 'ArticlePage');
+      // The Work page has its own file (work.html), so its preloads go straight in.
+      workAssets = pagePreloads(bundle, 'WorkPage');
     },
     // Each extra page is the built index.html with its own head.
     closeBundle() {
@@ -67,7 +81,10 @@ function siteMeta() {
       for (const page of PAGES.filter((p) => p.path !== '/')) {
         const { title, description } = page;
         const url = `${SITE_URL}${page.path}`;
-        const extra = page.path === '/insights' && articleAssets ? `<!-- article-page ${articleAssets} -->` : '';
+        const extra =
+          (page.path === '/insights' && articleAssets && `<!-- article-page ${articleAssets} -->`) ||
+          (page.path === '/work' && workAssets) ||
+          '';
         writeFileSync(`${outDir}/${page.file}`, setHead(withoutHeroArt(index), { title, description, url, extra }));
       }
     },

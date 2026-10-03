@@ -4,12 +4,12 @@ import { Arrow, Caret } from './Icons';
 import { useContent } from '../content/ContentProvider';
 import './Header.css';
 
-// Section links point at the home page, so they also work from /insights.
+// Section links point at the home page, so they also work from the other pages.
 const NAV = [
   { label: 'Services', href: '/#services', menu: 'services' },
   { label: 'Solutions', href: '/#solutions', menu: 'solutions' },
   { label: 'Industries', href: '/#industries', menu: 'industries' },
-  { label: 'Work', href: '/#work' },
+  { label: 'Work', href: '/work' },
   { label: 'Insights', href: '/insights' },
   { label: 'Contact', href: '/#contact' },
 ];

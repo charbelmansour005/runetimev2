@@ -38,6 +38,9 @@ brand/social links and SEO. Lists can be reordered, duplicated and removed; chan
 soon as you press **Save** (or ⌘/Ctrl + S). Invalid input is rejected by the API with a message
 pointing at the field.
 
+The home page shows the first four **Selected work** projects and the Work page (`/work`) lists
+them all, so keep the ones to lead with at the top. A project's link is shown as "Visit example.com".
+
 **Selected work** projects and **Client reviews** have an **Active** switch: turn it off to hide one
 from the site without deleting it (the API leaves inactive items out of the public content). The
 reviews section stays hidden until there's at least one active review. Only publish a review with
@@ -111,14 +114,14 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
 - `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
 - `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config. Only real pages
-  (`/`, `/insights`, `/insights/<slug>`, `/admin`) get the app; anything else is a real 404 (`public/404.html`).
+  (`/`, `/work`, `/insights`, `/insights/<slug>`, `/admin`) get the app; anything else is a real 404 (`public/404.html`).
 - `server/routes/pages.js` — article pages and `sitemap.xml`, built from the CMS content: each article
   page is `insights.html` with the article's title, summary, canonical URL and JSON-LD in its head and
   the article embedded; unknown articles get the 404 page with a 404 status.
-- `src/pages/` — pages other than the home page (`/insights`, `/insights/<slug>`). `src/content/Markdown.jsx`
+- `src/pages/` — pages other than the home page (`/work`, `/insights`, `/insights/<slug>`). `src/content/Markdown.jsx`
   renders article text (React elements only, never raw HTML). `src/BelowFold.jsx` — the home page below
   the hero, rendered just after the hero paints.
-- `vite.config.js` — besides the build, it writes `insights.html` and `admin.html` (each with its own
+- `vite.config.js` — besides the build, it writes `work.html`, `insights.html` and `admin.html` (each with its own
   title, description, canonical and Open Graph tags) and `robots.txt`, using the production domain
   (`VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override; see `server/lib/html.js`).
 - `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's poster

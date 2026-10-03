@@ -5,7 +5,7 @@ import './Footer.css';
 
 const PRIMARY_LINKS = [
   { label: 'Home', href: '/' },
-  { label: 'Work', href: '/#work' },
+  { label: 'Work', href: '/work' },
   { label: 'Insights', href: '/insights' },
   { label: 'Contact', href: '/#contact' },
 ];

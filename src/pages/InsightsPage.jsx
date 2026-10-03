@@ -40,7 +40,7 @@ export default function InsightsPage() {
         <section className="section insights-archive" aria-label="Articles">
           <div className="container">
             {tags.length > 1 && (
-              <div className="insights-archive__filters" role="group" aria-label="Filter by category">
+              <div className="archive-filters" role="group" aria-label="Filter by category">
                 {[null, ...tags].map((t) => (
                   <button
                     key={t ?? 'all'}

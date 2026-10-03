@@ -184,7 +184,7 @@ export const SECTIONS = [
     group: 'Home page',
     label: 'Selected work',
     description:
-      'Case-study tiles. Tags drive the All / Web / Mobile / AI filter. Turn off a project’s Active switch to hide it from the site without deleting it.',
+      'Project tiles. The home page shows the first four and the Work page (/work) lists them all, so put the ones to lead with at the top. Tags drive the All / Web / Mobile / AI filter. Turn off a project’s Active switch to hide it from the site without deleting it.',
     fields: [
       sectionTitle,
       sectionIntro,
@@ -222,10 +222,11 @@ export const SECTIONS = [
             name: 'url',
             type: 'text',
             inputType: 'url',
-            label: 'Case study link',
+            label: 'Link',
             max: 500,
             width: 'half',
             placeholder: 'https://… (optional)',
+            help: 'The live site or store page, shown as “Visit example.com”. Leave it empty for a project without one.',
           },
           { name: 'excerpt', type: 'textarea', label: 'Short description', max: 200, rows: 2 },
           { name: 'tags', type: 'tags', label: 'Tags', options: WORK_TAG_OPTIONS },

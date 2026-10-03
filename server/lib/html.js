@@ -17,6 +17,12 @@ export const siteUrl = () =>
 export const PAGES = [
   { path: '/', file: 'index.html' },
   {
+    path: '/work',
+    file: 'work.html',
+    title: 'Selected Work — Runtime Collective',
+    description: 'Web and mobile products designed and built by Runtime Collective.',
+  },
+  {
     path: '/insights',
     file: 'insights.html',
     title: 'Latest Insights — Runtime Collective',

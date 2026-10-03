@@ -1,6 +1,6 @@
 # Runtime Collective — DESIGN.md
 
-The design system for runtimecollective.vercel.app: the marketing site (`/`, `/insights`) and the
+The design system for runtimecollective.vercel.app: the marketing site (`/`, `/work`, `/insights`) and the
 CMS (`/admin`). It follows the [DESIGN.md](https://stitch.withgoogle.com/docs/design-md/overview/)
 format so people and AI agents can extend the site without drifting from it. Tokens live in
 `src/styles/tokens.css`; shared components in `src/styles/global.css`.
@@ -102,8 +102,10 @@ at least 44px tall on coarse pointers.
 - Service cards: shard icon plus title and text.
 - Insight cards (`PostCard`): 16:10 cover, then title, then meta (date, category and, for articles
   written in the CMS, reading time). Clickable only when there's an article page or a link.
-- Work tiles: 4:3, full-bleed colour, device mockup or screenshot, caption on a dark scrim. A tile is a
-  link only when a case study URL exists.
+- Work tiles (home page): 4:3, full-bleed colour, device mockup or screenshot, caption on a dark scrim. A
+  tile is a link only when the project has one, and the link says where it goes ("Visit example.com").
+- Project cards (`/work`): the same 4:3 artwork with 16px corners and no caption over it, then tag chips
+  (violet on `--lilac-soft`), the name at 20px/700 and the description at 14px/1.6 in `--ink-500`.
 - Review cards: white on mist, `--radius-card`, a violet quote mark on a lilac shard, the quote at
   17px/1.7 (`**bold**` gets a lilac highlighter), then a hairline and the person: a 48px round photo or
   their initials on `--lilac-soft`, name 16px/700, role and company 14px. Three to a row; a count that
@@ -172,7 +174,7 @@ lavender, ice, aqua.
   `scroll-padding-top` keeps anchor targets clear of it.
 - **Grids:**
   - Insights: 4 columns, then 2 at ≤1100px, then 1 at ≤560px. The archive uses 3, 2, 1.
-  - Work: 4 tiles edge to edge.
+  - Work: 4 tiles edge to edge on the home page (the first four projects). The Work page uses 3, 2, 1.
   - Numbers: 2-column stats. An odd last stat spans the row.
   - Industries: tabs plus a panel.
 - **Spacing values in use:** 4, 6, 8, 10, 12, 16, 18, 20, 24, 28, 32, 36, 44, 56, 64, 100px. Prefer these.
@@ -249,5 +251,6 @@ There's no elevation scale yet. The site has 24 distinct one-off shadows. Use th
   with e2 shadow and a lilac shard icon. Use tokens from `src/styles/tokens.css`."
 - "Build a dark band like the Industries section: `--grad-dark`, white title, 86% white body, a
   white `.btn--ghost` action, and an accessible tab list (roving tabindex, arrow keys)."
-- "Create a sub-page like `/insights`: dark `.page-hero` band with breadcrumb, then content on white,
-  reusing Header and Footer, with its own static `<head>` entry in `vite.config.js` PAGES."
+- "Create a sub-page like `/work` or `/insights`: dark `.page-hero` band with breadcrumb, then content on white,
+  reusing Header and Footer, with its own static `<head>` entry in PAGES (`server/lib/html.js`), a rewrite
+  in `vercel.json` and a route in `src/main.jsx`."

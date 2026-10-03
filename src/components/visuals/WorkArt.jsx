@@ -106,10 +106,11 @@ function AppIcon({ from, to, mark, accent }) {
 }
 
 // A device with either an uploaded screenshot or a drawn app screen on it.
-export default function WorkArt({ item, screenshot }) {
+// `eager` is for artwork at the top of a page, which shouldn't wait to load.
+export default function WorkArt({ item, screenshot, eager = false }) {
   const Screen = SCREENS[item.app] ?? FintechScreen;
   const screen = screenshot ? (
-    <img className="work-art__shot" src={screenshot} alt="" loading="lazy" decoding="async" />
+    <img className="work-art__shot" src={screenshot} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" />
   ) : (
     <Screen />
   );

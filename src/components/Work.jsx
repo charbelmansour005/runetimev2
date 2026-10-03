@@ -9,13 +9,55 @@ import { WORK_TAG_OPTIONS } from '../data/options';
 import './Work.css';
 
 const FILTERS = [{ value: 'all', label: 'All' }, ...WORK_TAG_OPTIONS];
+// The home page shows the first few; /work lists them all.
+const HOME_COUNT = 4;
+
+const isExternal = (url) => /^https?:\/\//i.test(url);
+
+// What a project's link says. A link to another site is named after it
+// ("Visit hajjmedical.center"); a page on this site is a case study.
+export function ProjectLinkLabel({ url }) {
+  let label = 'View case study';
+  if (isExternal(url)) {
+    try {
+      label = `Visit ${new URL(url).hostname.replace(/^www\./, '')}`;
+    } catch {
+      label = 'Visit the site';
+    }
+  }
+  return (
+    <>
+      {label} <Arrow />
+      {isExternal(url) && <span className="sr-only"> (opens in a new tab)</span>}
+    </>
+  );
+}
+
+// A project's artwork: an uploaded image filling the tile, or a device mockup
+// (with an uploaded screenshot on its screen, if there is one). Images load
+// lazily unless `eager` (for the first ones on the Work page).
+export function ProjectArt({ item, eager = false }) {
+  if (item.image && (item.imageFit === 'cover' || item.imageFit === 'contain')) {
+    return (
+      <img
+        className={`work-tile__img work-tile__img--${item.imageFit}`}
+        src={item.image}
+        alt=""
+        loading={eager ? 'eager' : 'lazy'}
+        decoding="async"
+      />
+    );
+  }
+  return <WorkArt item={item} screenshot={item.image || undefined} eager={eager} />;
+}
 
 export default function Work() {
   const { work } = useContent();
   const [filter, setFilter] = useState('all');
   // Every project switched off in the CMS: hide the section.
   if (!work.items.length) return null;
-  const items = work.items.filter((item) => filter === 'all' || item.tags.includes(filter));
+  const matching = work.items.filter((item) => filter === 'all' || item.tags.includes(filter));
+  const items = matching.slice(0, HOME_COUNT);
 
   return (
     <section className="section section--dark-alt work" id="work" aria-labelledby="work-title">
@@ -25,7 +67,7 @@ export default function Work() {
           title={work.title}
           tone="ghost"
           intro={work.intro}
-          action={{ label: 'Start a project', href: '#contact' }}
+          action={{ label: 'View all', href: '/work' }}
         />
         <Reveal className="work__filters" role="group" aria-label="Filter projects">
           {FILTERS.map((f) => (
@@ -41,15 +83,16 @@ export default function Work() {
           ))}
         </Reveal>
         <p className="sr-only" role="status">
-          {`Showing ${items.length} ${items.length === 1 ? 'project' : 'projects'}`}
+          {items.length < matching.length
+            ? `Showing ${items.length} of ${matching.length} projects`
+            : `Showing ${items.length} ${items.length === 1 ? 'project' : 'projects'}`}
         </p>
       </div>
 
       <div className="work__grid">
         {items.map((item, i) => {
-          // Only projects with a case study link are clickable.
+          // Only projects with a link are clickable.
           const Tile = item.url ? 'a' : 'article';
-          const external = item.url && /^https?:\/\//i.test(item.url);
           return (
             <Tile
               key={`${filter}-${itemKey(item, i)}`}
@@ -58,25 +101,14 @@ export default function Work() {
               {...(item.url ? linkProps(item.url) : {})}
             >
               <div className="work-tile__art" aria-hidden="true">
-                {item.image && (item.imageFit === 'cover' || item.imageFit === 'contain') ? (
-                  <img
-                    className={`work-tile__img work-tile__img--${item.imageFit}`}
-                    src={item.image}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                  />
-                ) : (
-                  <WorkArt item={item} screenshot={item.image || undefined} />
-                )}
+                <ProjectArt item={item} />
               </div>
               <div className="work-tile__overlay">
                 <h3>{item.name}</h3>
                 <p>{item.excerpt}</p>
                 {item.url && (
                   <span className="work-tile__more">
-                    View case study <Arrow />
-                    {external && <span className="sr-only"> (opens in a new tab)</span>}
+                    <ProjectLinkLabel url={item.url} />
                   </span>
                 )}
               </div>

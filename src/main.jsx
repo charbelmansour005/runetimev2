@@ -20,12 +20,16 @@ const ArticlePage = lazy(loadArticlePage);
 const articleSlug = /^\/insights\/([^/]+)$/.exec(path)?.[1];
 if (articleSlug) loadArticlePage();
 
+// So is the Work page (/work), which shares the project artwork with the
+// home page's below-the-fold chunk.
+const loadWorkPage = () => import('./pages/WorkPage.jsx');
+const WorkPage = lazy(loadWorkPage);
+if (path === '/work') loadWorkPage();
+
 function Page() {
-  if (articleSlug) {
+  if (articleSlug || path === '/work') {
     return (
-      <Suspense fallback={<div className="boot" />}>
-        <ArticlePage slug={articleSlug} />
-      </Suspense>
+      <Suspense fallback={<div className="boot" />}>{articleSlug ? <ArticlePage slug={articleSlug} /> : <WorkPage />}</Suspense>
     );
   }
   return path === '/insights' ? <InsightsPage /> : <App />;

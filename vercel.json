@@ -9,10 +9,12 @@
   "trailingSlash": false,
   "redirects": [
     { "source": "/insights.html", "destination": "/insights", "permanent": true },
+    { "source": "/work.html", "destination": "/work", "permanent": true },
     { "source": "/admin.html", "destination": "/admin", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
+    { "source": "/work", "destination": "/work.html" },
     { "source": "/insights", "destination": "/insights.html" },
     { "source": "/insights/:slug", "destination": "/api" },
     { "source": "/sitemap.xml", "destination": "/api" },
