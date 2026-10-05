@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
-// Turn the campus by dragging, zoom with the wheel or a pinch, and use the
+// Turn the garden by dragging, zoom with the wheel or a pinch, and use the
 // keyboard when it has focus. Nothing here traps the page: at full zoom-out
 // the wheel scrolls the page as usual, and once the page has scrolled it
 // always does; on touch screens vertical drags scroll the page
-// (touch-action: pan-y) and sideways drags turn the campus.
+// (touch-action: pan-y) and sideways drags turn the garden.
 
 export const HOME = { az: 30, el: 31, zoom: 1, tx: 0, ty: 0.75, tz: 0 };
 const EL = [10, 72];
@@ -35,7 +35,7 @@ export function createOrbit({ element, camera, reduced, onInput }) {
   const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
   const hit = new THREE.Vector3();
 
-  // The point on the campus under the cursor, if any.
+  // The point on the garden under the cursor, if any.
   function pointAt(clientX, clientY) {
     const rect = element.getBoundingClientRect();
     const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, 1 - ((clientY - rect.top) / rect.height) * 2);

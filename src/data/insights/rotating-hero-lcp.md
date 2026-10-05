@@ -1,4 +1,4 @@
-*Update, October 2026: the hero’s artwork is now a 3D campus instead of the particle sculpture described here. The fix works the same way: a still of the campus stands in until WebGL draws it.*
+*Update, October 2026: the hero’s artwork is now a 3D scene instead of the particle sculpture described here. The fix works the same way: a still of the scene stands in until WebGL draws it.*
 
 Our home page opens with a hero that rotates through four headlines, eight seconds each. During an audit of our own site we ran Lighthouse with applied throttling, where the browser really is slowed down to a mid-range phone on a slow connection. The page was visible after 3 seconds. Lighthouse reported a Largest Contentful Paint (LCP) of **12.8 seconds**.
 

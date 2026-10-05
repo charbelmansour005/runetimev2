@@ -12,11 +12,10 @@ format so people and AI agents can extend the site without drifting from it. Tok
 - **Mood:** a senior engineering studio. Confident, technical and calm, never playful or mystical.
 - **Signature contrast:** near-black violet heroes and dark bands (`--void`, `--grad-dark`)
   alternate with white and mist content sections.
-- **Hero:** a 3D *miniature campus* at night, built in code with three.js: an AI lab with a neural
-  network under a glass dome, an office tower with a hologram globe, an app studio with a giant phone
-  and a browser billboard, and a server hall under a cloud, all around a monorail that runs an endless
-  ∞ loop ("built to run"). It's the same on every slide (only the headline changes), and visitors can
-  turn it and zoom in.
+- **Hero:** a 3D *miniature Japanese garden* at dusk, built in code with three.js: a vermilion torii
+  gate standing in a pond, reflected in the water, with a pagoda, an arched bridge, stone lanterns and
+  cherry, maple and pine trees on the shore. It's the same on every slide (only the headline changes),
+  and visitors can turn it and zoom in.
 - **Signature shape:** the angular *shard* (a six-point polygon from the logo's geometry). Use it
   for small accents (icon backs, card corners, decorative layers), never as the main artwork.
 - **Density:** generous. Sections breathe (100px vertical padding on desktop) and copy stays in short
@@ -147,14 +146,15 @@ at least 44px tall on coarse pointers.
 **Shard.** `.shard` with a `--shard-a`/`--shard-b` gradient. Variants: ink, white, lilac, pink,
 lavender, ice, aqua.
 
-**3D campus (hero).**
-- Built from rounded boxes, cylinders and swept paths (`src/components/hero/scene/`); everything that
-  doesn't move is merged into one mesh per material: about 100 draw calls a frame, shadows included.
-- Palette: off-white and lilac buildings, teal and blossom-pink trees, warm lit windows, and
-  `--violet-light` accents (the slab's seam and the monorail's light strips).
-- Moving parts: the monorail, cars, a drone, fans, a satellite dish, the neural network's pulses, the
-  hologram's routes, server lights, data going up to the cloud, the phone's scrolling feed and the
-  billboard's chart. All of it stops with the hero's pause button and with reduced motion.
+**3D garden (hero).**
+- Built from rounded boxes, cylinders and a few extruded shapes (`src/components/hero/scene/`);
+  everything that doesn't move is merged into one mesh per material.
+- Palette: vermilion (`#FF4A1F`) for the gate, pagoda and bridge, with near-black roofs; moss green
+  land, deep blue water, blossom pink and maple red trees, warm lantern light, and a `--violet-light`
+  seam around the base. Vermilion belongs to this scene only: don't use it in the interface.
+- Reflections are the same parts mirrored under the water and faded with depth (no second render).
+- Moving parts: koi, drifting paper lanterns, ripples around the gate's pillars and falling petals.
+  All of it stops with the hero's pause button and with reduced motion.
 - Drag to turn it (all the way round), scroll or pinch to zoom towards the cursor, double-click or Home
   to reset, arrow keys and +/− when it has focus. It never traps the page: at full zoom-out the wheel
   scrolls the page, once the page has scrolled it always does, and on touch screens vertical drags

@@ -85,7 +85,7 @@ export default function Hero() {
         autoplay?.paused(held);
         progressTween?.paused(held);
         slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
-        // Pausing stops the 3D campus as well; hovering only holds the slide.
+        // Pausing stops the 3D garden as well; hovering only holds the slide.
         playingRef.current = !hold.user;
         sceneApi.current?.setPlaying(!hold.user);
       };
@@ -101,7 +101,7 @@ export default function Hero() {
       };
 
       // The headline leaves left and the next one sweeps in from the right.
-      // The 3D campus beside it stays as it is.
+      // The 3D garden beside it stays as it is.
       function go(next) {
         if (next === current) return;
         if (busy) {
@@ -170,7 +170,7 @@ export default function Hero() {
       listen(root, 'focusout', (e) => !root.contains(e.relatedTarget) && holdFocus(false));
 
       if (!reduced) {
-        // Scroll parallax: the campus lags behind as the hero leaves.
+        // Scroll parallax: the garden lags behind as the hero leaves.
         const [parallax] = q('.hero__sculpture');
         let ticking = false;
         listen(
@@ -190,7 +190,7 @@ export default function Hero() {
       }
 
       // Swipe between slides on touch screens (mostly-horizontal swipes only).
-      // Swipes on the 3D campus turn it instead.
+      // Swipes on the 3D garden turn it instead.
       let touch = null;
       listen(
         root,
@@ -329,7 +329,7 @@ export default function Hero() {
       <div className="hero__art">
         <div className="hero__sculpture">
           <div className="hero__glow" aria-hidden="true" />
-          {/* Shown until the 3D campus takes over, and kept without WebGL. */}
+          {/* Shown until the 3D garden takes over, and kept without WebGL. */}
           <img
             ref={posterRef}
             className={`hero__poster${artReady ? ' is-hidden' : ''}`}
@@ -338,7 +338,7 @@ export default function Hero() {
             sizes={POSTER_SIZES}
             alt=""
             width="960"
-            height="803"
+            height="790"
             fetchPriority="high"
             decoding="async"
           />

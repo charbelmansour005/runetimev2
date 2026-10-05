@@ -1,5 +1,5 @@
 // Renders the hero poster (public/hero-poster.webp and hero-poster-640.webp):
-// a still of the 3D campus at its starting view, on a transparent background,
+// a still of the 3D garden at its starting view, on a transparent background,
 // cropped around the point the camera aims at so it lines up with the scene.
 //
 // With the site running locally (npm run build && npm start):
@@ -84,8 +84,8 @@ await browser.close();
 writeFileSync('public/hero-poster.webp', Buffer.from(result.large.data, 'base64'));
 writeFileSync('public/hero-poster-640.webp', Buffer.from(result.small.data, 'base64'));
 console.log(`Wrote public/hero-poster.webp (960 × ${result.large.height}) and hero-poster-640.webp.`);
-// Hero.css sizes the poster for a 672 px wide crop at this viewport.
-console.log(`The campus is ${result.width} px wide at 1440 × 900 (it was 672).`);
+// Hero.css sizes the poster for a 661 px wide crop at this viewport.
+console.log(`The garden is ${result.width} px wide at 1440 × 900 (it was 661).`);
 console.log(
-  'If that changed, scale the poster width in Hero.css by the same factor, and update its width/height in index.html, Hero.jsx and ContentProvider.jsx.',
+  'If that changed, scale the poster width in Hero.css by the same factor, and update its height in Hero.jsx.',
 );

@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-// Building blocks for the hero's miniature campus. Everything is generated in
+// Building blocks for the hero's miniature garden. Everything is generated in
 // code (no model to download), and parts that never move are merged into one
-// mesh per material, so the whole campus draws in a handful of calls.
+// mesh per material, so the whole garden draws in a handful of calls.
 
 const matrix = new THREE.Matrix4();
 const quaternion = new THREE.Quaternion();
@@ -37,7 +37,7 @@ export const color = (value) => new THREE.Color(value);
 // Collects static parts per material, then writes them all into one mesh per
 // material, with each part's transform and colour baked into its vertices.
 // (Written straight into one buffer: cloning and merging geometries made
-// building the campus several times slower.)
+// building the garden several times slower.)
 export class Batch {
   constructor() {
     this.parts = new Map();
@@ -146,46 +146,6 @@ export function glowSprite(tint, size, opacity = 1) {
   );
   sprite.scale.setScalar(size);
   return sprite;
-}
-
-// A path swept with a rectangular profile that stays upright (no twisting),
-// for the monorail beam. `points` is a closed loop.
-export function sweep(points, width, height) {
-  const positions = [];
-  const normals = [];
-  const up = new THREE.Vector3(0, 1, 0);
-  const n = points.length;
-  const frames = points.map((p, i) => {
-    const tangent = points[(i + 1) % n].clone().sub(points[(i - 1 + n) % n]).setY(0).normalize();
-    const side = new THREE.Vector3().crossVectors(up, tangent).normalize();
-    return { p, side };
-  });
-  // Corners of the profile, and the outward normal of each face.
-  const corner = (f, sx, sy) => f.p.clone().addScaledVector(f.side, (sx * width) / 2).addScaledVector(up, (sy * height) / 2);
-  const faces = [
-    [[-1, 1], [1, 1], up],
-    [[1, -1], [-1, -1], up.clone().negate()],
-    [[1, 1], [1, -1], null],
-    [[-1, -1], [-1, 1], null],
-  ];
-  for (let i = 0; i < n; i += 1) {
-    const a = frames[i];
-    const b = frames[(i + 1) % n];
-    for (const [[ax, ay], [bx, by], normal] of faces) {
-      const quad = [corner(a, ax, ay), corner(a, bx, by), corner(b, bx, by), corner(b, ax, ay)];
-      const nA = normal ?? a.side.clone().multiplyScalar(ax);
-      const nB = normal ?? b.side.clone().multiplyScalar(ax);
-      for (const k of [0, 2, 1, 0, 3, 2]) {
-        positions.push(quad[k].x, quad[k].y, quad[k].z);
-        const nn = k === 0 || k === 1 ? nA : nB;
-        normals.push(nn.x, nn.y, nn.z);
-      }
-    }
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-  return geometry;
 }
 
 // Lets the main thread breathe between build steps.

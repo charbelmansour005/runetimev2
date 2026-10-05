@@ -37,7 +37,7 @@
   transform-origin: left center;
 }
 
-/* ---------- Art: the 3D campus ---------- */
+/* ---------- Art: the 3D garden ---------- */
 
 .hero__art {
   position: absolute;
@@ -60,7 +60,7 @@
   container-type: size;
 }
 
-/* Visitors can turn the campus by dragging and zoom it with the wheel or a
+/* Visitors can turn the garden by dragging and zoom it with the wheel or a
    pinch. On touch screens, vertical drags still scroll the page. */
 .hero-scene.is-ready .hero-scene__canvas {
   pointer-events: auto;
@@ -68,7 +68,7 @@
   touch-action: pan-y;
 }
 
-/* Zoomed in, the campus fades out towards the headline and under the header
+/* Zoomed in, the garden fades out towards the headline and under the header
    instead of ending in a hard edge. */
 .hero-scene__canvas {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent 8%, #000 19%);
@@ -143,7 +143,7 @@
   }
 }
 
-/* Soft light behind the campus. */
+/* Soft light behind the garden. */
 .hero__glow {
   --glow: #8b6bff;
   position: absolute;
@@ -161,16 +161,16 @@
   );
 }
 
-/* A still of the campus, shown until the WebGL scene is ready. It's centred
+/* A still of the garden, shown until the WebGL scene is ready. It's centred
    where the scene's camera aims (45% down) and scales the way the camera
-   frames the campus: with the width of the box, or its height once the box is
-   wider than 0.95 : 1. Rendered by the scene itself, so the two line up. */
+   frames the garden: with the width of the box, or its height once the box is
+   about as wide as it is tall. Rendered by the scene itself, so the two line up. */
 .hero__poster {
   position: absolute;
   left: 50%;
   top: 45%;
-  width: 79%;
-  width: min(78.9cqw, 74.7cqh);
+  width: 77%;
+  width: min(76.6cqw, 76.5cqh);
   height: auto;
   max-width: none;
   transform: translate(-50%, -50%);
@@ -201,7 +201,7 @@
 }
 
 /* Only the words and the button take the pointer: the space around them
-   belongs to the campus behind, so it can be dragged. */
+   belongs to the garden behind, so it can be dragged. */
 .hero__line,
 .hero__cta {
   pointer-events: auto;
@@ -210,6 +210,13 @@
 .hero__slide {
   grid-area: 1 / 1;
   align-self: center;
+}
+
+/* Only the first slide shows in the page as it arrives; the slideshow takes
+   over from there (its inline styles win over this). */
+.hero__slide:not(:first-child) {
+  visibility: hidden;
+  opacity: 0;
 }
 
 .hero__title {
@@ -358,13 +365,13 @@
     width: 100%;
   }
 
-  /* The campus sits above the headline, which moves to the bottom. */
+  /* The garden sits above the headline, which moves to the bottom. */
   .hero__sculpture {
     top: calc(var(--header-h) - 12px);
     bottom: 40%;
   }
 
-  /* Above the campus here: the headline fills the space below it. */
+  /* Above the garden here: the headline fills the space below it. */
   .hero-scene__hint {
     top: 6px;
     bottom: auto;

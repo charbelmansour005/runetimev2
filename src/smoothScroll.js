@@ -58,7 +58,7 @@ export function installSmoothScroll() {
   }
 
   function onWheel(e) {
-    // Zooming, sideways scrolling, or already handled (the hero's 3D campus).
+    // Zooming, sideways scrolling, or already handled (the hero's 3D garden).
     if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey) return;
     if (reduced.matches || Math.abs(e.deltaX) > Math.abs(e.deltaY) || !e.deltaY) return;
     // The page is locked (the mobile menu is open).

@@ -1,21 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { BOUNDS, buildCampus } from './scene/campus';
+import { BOUNDS, buildGarden } from './scene/garden';
 import { nextTask } from './scene/kit';
 import { createOrbit, HOME } from './scene/orbit';
 
 const FOV = 30;
-// Where the campus's centre sits, as a share of the canvas height, and how
+// Where the garden's centre sits, as a share of the canvas height, and how
 // much of the canvas it fills at full zoom-out (the tab bar covers the bottom
 // on desktop).
 const CENTER_Y = 0.45;
 const FILL = { x: 0.84, y: 0.66 };
 const LABEL =
-  '3D illustration of a small campus around a monorail loop. Drag to turn it and scroll to zoom, or use the arrow keys and the plus and minus keys.';
+  '3D illustration of a red torii gate standing in a pond, with a pagoda, stone lanterns and cherry trees on the shore. Drag to turn it and scroll to zoom, or use the arrow keys and the plus and minus keys.';
 
 const rad = THREE.MathUtils.degToRad;
 
-// The camera distance that fits the whole campus in the canvas, seen from the
+// The camera distance that fits the whole garden in the canvas, seen from the
 // starting angle.
 function fitDistance(aspect) {
   const tanV = Math.tan(rad(FOV / 2));
@@ -42,7 +42,7 @@ function fitDistance(aspect) {
   return distance;
 }
 
-// A miniature campus at night: the same on every slide, and the visitor can
+// A miniature Japanese garden at dusk (a torii gate in a pond): the same on every slide, and the visitor can
 // turn it and zoom in. Built in code after the headline has painted; the
 // poster stands in until then (and stays without WebGL or with Data Saver on).
 export default function HeroScene({ apiRef, playingRef, onReady }) {
@@ -93,12 +93,12 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
 
       await nextTask();
       if (disposed) return;
-      const campus = await buildCampus({ pause: nextTask });
+      const garden = await buildGarden({ pause: nextTask });
       if (disposed) {
-        campus.dispose();
+        garden.dispose();
         return;
       }
-      scene.add(campus.group);
+      scene.add(garden.group);
 
       // --- Camera ------------------------------------------------------------
       let fit = 10;
@@ -139,7 +139,7 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
       let sceneTime = 0;
       const render = () => {
         placeCamera();
-        campus.update(sceneTime);
+        garden.update(sceneTime);
         renderer.render(scene, camera);
         if (!shown) {
           shown = true;
@@ -156,12 +156,12 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
         camera.setViewOffset(width, height, 0, (0.5 - CENTER_Y) * height, width, height);
         camera.updateProjectionMatrix();
         fit = fitDistance(camera.aspect);
-        campus.setPixelScale((height * renderer.getPixelRatio()) / (2 * Math.tan(rad(FOV / 2))));
+        garden.setPixelScale((height * renderer.getPixelRatio()) / (2 * Math.tan(rad(FOV / 2))));
         if (compiled) wake();
       };
 
       // --- Loop --------------------------------------------------------------
-      // Runs while the campus is animating (on screen and not paused) or the
+      // Runs while the garden is animating (on screen and not paused) or the
       // view is still easing after a drag or zoom; otherwise it sleeps.
       let raf = 0;
       let looping = false;
@@ -217,14 +217,14 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
       compiled = true;
       if (disposed) {
         orbit.dispose();
-        campus.dispose();
+        garden.dispose();
         renderer.dispose();
         return;
       }
       render();
       io.observe(mount);
 
-      // The pause button stops the campus too.
+      // The pause button stops the garden too.
       apiRef.current = { setPlaying: () => wake() };
 
       teardown = () => {
@@ -234,7 +234,7 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
         orbit.dispose();
         apiRef.current = null;
         keyRef.current = null;
-        campus.dispose();
+        garden.dispose();
         key.dispose();
         renderer.dispose();
         renderer.forceContextLoss();

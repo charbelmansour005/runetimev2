@@ -43,7 +43,7 @@ export const SECTIONS = [
     group: 'Home page',
     label: 'Hero slider',
     description:
-      'The rotating slides at the top of the page. Each slide has a headline and a tab in the bar at the bottom; the 3D campus beside them stays the same on every slide.',
+      'The rotating slides at the top of the page. Each slide has a headline and a tab in the bar at the bottom; the 3D garden beside them stays the same on every slide.',
     fields: [
       {
         name: 'slides',
