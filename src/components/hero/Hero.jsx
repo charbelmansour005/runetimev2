@@ -9,7 +9,6 @@ import './Hero.css';
 // three.js is heavy, so the WebGL layers start loading only once the poster
 // (the page's largest paint) is on screen and the browser is idle.
 const HeroScene = lazy(() => import('./HeroScene'));
-const WaveCanvas = lazy(() => import('./WaveCanvas'));
 
 const SLIDE_SECONDS = 8;
 
@@ -19,7 +18,6 @@ export default function Hero() {
   const rootRef = useRef(null);
   const tabRefs = useRef([]);
   const sceneApi = useRef(null);
-  const waveApi = useRef(null);
   const playingRef = useRef(true);
   const controls = useRef({ go: () => {}, setPlaying: () => {} });
   const [active, setActive] = useState(0);
@@ -87,11 +85,9 @@ export default function Hero() {
         autoplay?.paused(held);
         progressTween?.paused(held);
         slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
-        // Pausing stops the 3D campus and the wave as well; hovering only
-        // holds the slide.
+        // Pausing stops the 3D campus as well; hovering only holds the slide.
         playingRef.current = !hold.user;
         sceneApi.current?.setPlaying(!hold.user);
-        waveApi.current?.setPlaying(!hold.user);
       };
       setPlaying(!hold.user);
 
@@ -248,13 +244,6 @@ export default function Hero() {
         {brand.name}: {brand.tagline}
       </h1>
       <div className="hero__bg" aria-hidden="true" />
-      {webgl && (
-        <ErrorBoundary>
-          <Suspense fallback={null}>
-            <WaveCanvas className="hero__wave" apiRef={waveApi} playingRef={playingRef} />
-          </Suspense>
-        </ErrorBoundary>
-      )}
       <div className="hero__progress" aria-hidden="true">
         <span className="hero__progress-fill" />
       </div>

@@ -16,7 +16,7 @@ format so people and AI agents can extend the site without drifting from it. Tok
   network under a glass dome, an office tower with a hologram globe, an app studio with a giant phone
   and a browser billboard, and a server hall under a cloud, all around a monorail that runs an endless
   ∞ loop ("built to run"). It's the same on every slide (only the headline changes), and visitors can
-  turn it and zoom in. It sits above a violet→coral wireframe wave.
+  turn it and zoom in.
 - **Signature shape:** the angular *shard* (a six-point polygon from the logo's geometry). Use it
   for small accents (icon backs, card corners, decorative layers), never as the main artwork.
 - **Density:** generous. Sections breathe (100px vertical padding on desktop) and copy stays in short
@@ -40,7 +40,7 @@ format so people and AI agents can extend the site without drifting from it. Tok
 | `--violet-light` | `#8B5CFF` | Accent on dark: progress fills, focus ring, glows |
 | `--lilac` | `#B9A5F5` | Hover/current nav on dark, breadcrumbs |
 | `--lilac-soft` | `#E4DCFF` | Tinted tile/background |
-| `--coral` | `#FF6C6C` | Secondary accent (wave end, highlights). Use sparingly, never as text on white |
+| `--coral` | `#FF6C6C` | Secondary accent (highlights). Use sparingly, never as text on white |
 | `--glass-fill` | `rgba(12,12,12,.4)` | Glass surfaces over the hero (blur 5px) |
 | `--glass-stroke` | `rgba(255,255,255,.3)` | Glass borders |
 
