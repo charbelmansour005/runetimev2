@@ -161,7 +161,11 @@ lavender, ice, aqua.
   scroll. A "Drag to turn" hint shows until the first interaction.
 - A poster (`/hero-poster.webp`, rendered from the scene by `scripts/render-poster.mjs`) is shown
   until the first WebGL frame and lines up with it; it stays without WebGL or with Data Saver on.
-  three.js starts loading only after the poster has painted.
+  three.js starts loading only once the page has loaded and settled: on desktops when the browser is
+  idle, on phones at the first touch or scroll (or 4 s after load), so a short visit never pays for it.
+- The headline slideshow uses the Web Animations API with transform and opacity only, so the sweeps
+  run on the compositor and stay smooth while the page is busy. The first headline arrives with the
+  page and stays put; only later slides sweep in.
 
 ## 5. Layout Principles
 
@@ -207,7 +211,7 @@ There's no elevation scale yet. The site has 24 distinct one-off shadows. Use th
   100% client retention and 100K+ monthly users.
 - Give every carousel or auto-advancing element a pause control, and pause it on hover and keyboard focus.
 - Respect `prefers-reduced-motion`: no autoplay, no parallax, and static WebGL frames.
-- Lazy-load heavy visuals. three.js loads only for the hero, after the poster has painted.
+- Lazy-load heavy visuals. three.js loads only for the hero, once the page has loaded and settled.
 - Use tokens. Extend `tokens.css` rather than hard-coding colours. There are 165 literal colours
   today, mostly inside mockups.
 
@@ -216,7 +220,8 @@ There's no elevation scale yet. The site has 24 distinct one-off shadows. Use th
 - Don't put text lighter than `--ink-500` on light surfaces, or under 60% white on dark.
 - Don't make hover-only menus or controls, or links whose text promises something else (e.g.
   "View case study" pointing at the contact form).
-- Don't make anything that grows the page's main JS without need (GSAP ScrollTrigger was removed for this).
+- Don't make anything that grows the page's main JS without need (GSAP was removed for this: the
+  hero animates with the Web Animations API, and scroll reveals are CSS transitions).
 - Don't invent app or company names for client work. Use the real name with permission, or
   describe the product ("Travel eSIM app").
 

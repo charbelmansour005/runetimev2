@@ -1,16 +1,65 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { gsap } from 'gsap';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import ErrorBoundary from '../ErrorBoundary';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
 import { POSTER_SIZES, POSTER_SRCSET } from './poster';
 import './Hero.css';
 
-// three.js is heavy, so the WebGL layers start loading only once the poster
-// (the page's largest paint) is on screen and the browser is idle.
+// three.js is heavy, so the WebGL layer starts loading only once the page has
+// loaded and settled (see startWebGL).
 const HeroScene = lazy(() => import('./HeroScene'));
 
 const SLIDE_SECONDS = 8;
+// The same curves as the CSS tokens --ease-in-out-2 and --ease-out-3.
+const EASE = 'cubic-bezier(0.45, 0, 0.55, 1)';
+const EASE_OUT = 'cubic-bezier(0.33, 1, 0.68, 1)';
+
+// Resolves when the animation has finished or been cancelled (`finished`
+// rejects on cancel, which here is never an error).
+const settled = (animations) => Promise.all(animations.map((a) => a.finished.catch(() => {})));
+
+// When to start the 3D scene: the headline, the poster and the rest of the
+// page come first. Phones wait for the visitor's first touch or scroll (or a
+// few seconds), so a short visit never downloads it; desktops wait until the
+// browser is idle after the load event.
+function startWebGL(poster, onStart) {
+  let stopped = false;
+  const cleanups = [];
+  const start = () => {
+    if (stopped) return;
+    stopped = true;
+    cleanups.forEach((fn) => fn());
+    onStart();
+  };
+  const loaded = new Promise((resolve) => {
+    if (document.readyState === 'complete') resolve();
+    else window.addEventListener('load', resolve, { once: true });
+  });
+  Promise.all([poster.decode().catch(() => {}), loaded]).then(() => {
+    if (stopped) return;
+    const phone = window.matchMedia('(pointer: coarse)').matches || window.innerWidth <= 900;
+    if (phone) {
+      const timer = setTimeout(start, 4000);
+      cleanups.push(() => clearTimeout(timer));
+      // (Not 'scroll': the browser scrolls on its own at load, to a #section
+      // or back to where the visitor was. A finger always starts with a touch.)
+      for (const type of ['pointerdown', 'touchstart', 'wheel', 'keydown']) {
+        window.addEventListener(type, start, { once: true, passive: true });
+        cleanups.push(() => window.removeEventListener(type, start));
+      }
+    } else {
+      const whenIdle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 1000));
+      const cancelIdle = window.cancelIdleCallback ?? clearTimeout;
+      const idle = whenIdle(start, { timeout: 2000 });
+      cleanups.push(() => cancelIdle(idle));
+    }
+  });
+  return () => {
+    stopped = true;
+    cleanups.forEach((fn) => fn());
+  };
+}
 
 export default function Hero() {
   const { hero, brand } = useContent();
@@ -25,31 +74,11 @@ export default function Hero() {
   const [artReady, setArtReady] = useState(false);
   const [webgl, setWebgl] = useState(false);
   const posterRef = useRef(null);
+  const onSceneReady = useCallback(() => setArtReady(true), []);
 
   useEffect(() => {
-    let cancelled = false;
-    let frame = 0;
-    let idle = 0;
-    const whenIdle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 200));
-    const cancelIdle = window.cancelIdleCallback ?? clearTimeout;
-    // decode() settles once the poster can paint (or has failed to load); two
-    // frames later it's on screen.
-    posterRef.current
-      .decode()
-      .catch(() => {})
-      .then(() => {
-        if (cancelled) return;
-        frame = requestAnimationFrame(() => {
-          frame = requestAnimationFrame(() => {
-            idle = whenIdle(() => setWebgl(true), { timeout: 1000 });
-          });
-        });
-      });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-      cancelIdle(idle);
-    };
+    if (navigator.connection?.saveData) return undefined; // The poster stays.
+    return startWebGL(posterRef.current, () => setWebgl(true));
   }, []);
 
   useLayoutEffect(() => {
@@ -60,167 +89,196 @@ export default function Hero() {
       el.addEventListener(type, fn, opts);
       cleanups.push(() => el.removeEventListener(type, fn, opts));
     };
+    const q = (selector) => [...root.querySelectorAll(selector)];
+    const slideEls = q('.hero__slide');
+    const titles = q('.hero__title');
+    const ctas = q('.hero__cta');
+    const [slidesEl] = q('.hero__slides');
+    const [progress] = q('.hero__progress-fill');
+    const fills = q('.hero-tab__fill');
+    const n = slides.length;
 
-    const ctx = gsap.context(() => {
-      const q = gsap.utils.selector(root);
-      const slideEls = q('.hero__slide');
-      const titles = q('.hero__title');
-      const ctas = q('.hero__cta');
-      const [slidesEl] = q('.hero__slides');
-      const [progress] = q('.hero__progress-fill');
-      const fills = q('.hero-tab__fill');
+    let alive = true;
+    let current = 0;
+    let busy = false;
+    let queued = null;
+    let progressAnims = [];
 
-      let current = -1;
-      let busy = false;
-      let queued = null;
-      let autoplay;
-      let progressTween;
+    // Rotation stops while the visitor reads (hovering the copy or the tabs,
+    // or keyboard focus inside the hero) and whenever they press pause.
+    // It starts paused when they've asked for reduced motion.
+    const hold = { user: reduced, hover: false, focus: false };
+    const sync = () => {
+      const held = hold.user || hold.hover || hold.focus;
+      for (const a of progressAnims) {
+        if (held) a.pause();
+        else if (a.playState === 'paused') a.play();
+      }
+      slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
+      // Pausing stops the 3D garden as well; hovering only holds the slide.
+      playingRef.current = !hold.user;
+      sceneApi.current?.setPlaying(!hold.user);
+    };
+    setPlaying(!hold.user);
 
-      // Rotation stops while the visitor reads (hovering the copy or the tabs,
-      // or keyboard focus inside the hero) and whenever they press pause.
-      // It starts paused when they've asked for reduced motion.
-      const hold = { user: reduced, hover: false, focus: false };
-      const sync = () => {
-        const held = hold.user || hold.hover || hold.focus;
-        autoplay?.paused(held);
-        progressTween?.paused(held);
-        slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
-        // Pausing stops the 3D garden as well; hovering only holds the slide.
-        playingRef.current = !hold.user;
-        sceneApi.current?.setPlaying(!hold.user);
-      };
-      setPlaying(!hold.user);
+    // The bars fill over the slide's time; when they're full, the next slide.
+    const schedule = (i) => {
+      progressAnims = [progress, fills[i]].map((el) =>
+        el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], {
+          duration: SLIDE_SECONDS * 1000,
+          easing: 'linear',
+          fill: 'both',
+        }),
+      );
+      const [bar] = progressAnims;
+      bar.finished.then(() => alive && bar === progressAnims[0] && go((i + 1) % n)).catch(() => {});
+      sync();
+    };
 
-      gsap.set(slideEls, { autoAlpha: 0 });
+    // Empties the bars quickly, from wherever they are, before a change.
+    const rewind = () => {
+      for (const a of progressAnims) {
+        const el = a.effect.target;
+        const from = getComputedStyle(el).transform;
+        a.cancel();
+        el.animate([{ transform: from }, { transform: 'scaleX(0)' }], { duration: 350, easing: EASE_OUT }).finished.catch(() => {});
+      }
+      progressAnims = [];
+    };
 
-      const schedule = (i) => {
-        gsap.set([progress, ...fills], { scaleX: 0 });
-        progressTween = gsap.to([progress, fills[i]], { scaleX: 1, duration: SLIDE_SECONDS, ease: 'none' });
-        autoplay = gsap.delayedCall(SLIDE_SECONDS, () => go((i + 1) % slides.length));
-        sync();
-      };
+    // Moves `is-active` (and with it visibility) to the next slide at once.
+    const show = (next) => flushSync(() => setActive(next));
 
-      // The headline leaves left and the next one sweeps in from the right.
-      // The 3D garden beside it stays as it is.
-      function go(next) {
-        if (next === current) return;
-        if (busy) {
-          queued = next; // Picked mid-transition: show it right after.
-          return;
-        }
-        busy = true;
-        autoplay?.kill();
-        progressTween?.kill();
-        gsap.to([progress, ...fills], { scaleX: 0, duration: 0.35, ease: 'power2.out' });
-        const prev = current;
-        const vw = window.innerWidth;
-        const tl = gsap.timeline({
-          defaults: { ease: 'power2.inOut' },
-          onComplete: () => {
-            current = next;
-            busy = false;
-            const target = queued;
-            queued = null;
-            if (target !== null && target !== next) go(target);
-            else schedule(next);
-          },
-        });
+    // The headline leaves left and the next one sweeps in from the right.
+    // Transform and opacity only, so the browser runs them on the compositor
+    // and a busy page can't make them stutter. The 3D garden stays as it is.
+    async function go(next) {
+      if (n < 2 || next === current) return;
+      if (busy) {
+        queued = next; // Picked mid-transition: show it right after.
+        return;
+      }
+      busy = true;
+      rewind();
+      const prev = current;
+      const vw = window.innerWidth;
 
-        if (reduced) {
-          if (prev >= 0) tl.to(slideEls[prev], { autoAlpha: 0, duration: 0.3 });
-          tl.add(() => setActive(next)).to(slideEls[next], { autoAlpha: 1, duration: 0.4 });
-          return;
-        }
-
-        if (prev >= 0) {
-          tl.to(titles[prev], { x: -vw, duration: 0.8 }, 0)
-            .to(ctas[prev], { x: -vw, duration: 0.6 }, 0)
-            .set(slideEls[prev], { autoAlpha: 0 });
-        }
-
-        tl.add(() => setActive(next))
-          .set(slideEls[next], { autoAlpha: 1 })
-          .fromTo(titles[next], { x: vw * 0.55, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.95 })
-          .fromTo(ctas[next], { x: vw * 0.55, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.95 }, '<0.08');
+      if (reduced) {
+        await settled([slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' })]);
+        if (!alive) return;
+        show(next);
+        current = next; // What the tab bar shows is what picks and swipes count from.
+        slideEls[prev].getAnimations().forEach((a) => a.cancel());
+        await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE })]);
+      } else {
+        const leave = [{ transform: 'translateX(0)' }, { transform: `translateX(${-vw}px)` }];
+        const out = [
+          titles[prev].animate(leave, { duration: 800, easing: EASE, fill: 'both' }),
+          ctas[prev].animate(leave, { duration: 600, easing: EASE, fill: 'both' }),
+        ];
+        await settled(out);
+        if (!alive) return;
+        show(next);
+        current = next;
+        out.forEach((a) => a.cancel()); // Back in place, hidden.
+        const sweep = [
+          { transform: `translateX(${vw * 0.55}px)`, opacity: 0 },
+          { transform: 'translateX(0)', opacity: 1 },
+        ];
+        const into = [
+          titles[next].animate(sweep, { duration: 950, easing: EASE, fill: 'both' }),
+          ctas[next].animate(sweep, { duration: 950, delay: 80, easing: EASE, fill: 'both' }),
+        ];
+        await settled(into);
+        if (!alive) return;
+        into.forEach((a) => a.cancel()); // Where it ended is where it rests.
       }
 
-      controls.current = {
-        go,
-        setPlaying: (play) => {
-          hold.user = !play;
-          setPlaying(play);
-          sync();
-        },
-      };
+      busy = false;
+      const target = queued;
+      queued = null;
+      if (target !== null && target !== next) go(target);
+      else schedule(next);
+    }
 
-      const holdHover = (value) => {
-        hold.hover = value;
+    controls.current = {
+      go,
+      setPlaying: (play) => {
+        hold.user = !play;
+        setPlaying(play);
         sync();
-      };
-      const holdFocus = (value) => {
-        hold.focus = value;
-        sync();
-      };
-      q('.hero__slides, .hero__tabbar').forEach((el) => {
-        listen(el, 'pointerenter', (e) => e.pointerType === 'mouse' && holdHover(true));
-        listen(el, 'pointerleave', (e) => e.pointerType === 'mouse' && holdHover(false));
-      });
-      // Only keyboard focus holds the slide; a mouse click on a tab shouldn't.
-      listen(root, 'focusin', (e) => e.target.matches(':focus-visible') && holdFocus(true));
-      listen(root, 'focusout', (e) => !root.contains(e.relatedTarget) && holdFocus(false));
+      },
+    };
 
-      if (!reduced) {
-        // Scroll parallax: the garden lags behind as the hero leaves.
-        const [parallax] = q('.hero__sculpture');
-        let ticking = false;
-        listen(
-          window,
-          'scroll',
-          () => {
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(() => {
-              ticking = false;
-              const passed = Math.min(1, Math.max(0, window.scrollY / (root.offsetHeight || 1)));
-              gsap.set(parallax, { yPercent: 14 * passed });
-            });
-          },
-          { passive: true },
-        );
-      }
+    const holdHover = (value) => {
+      hold.hover = value;
+      sync();
+    };
+    const holdFocus = (value) => {
+      hold.focus = value;
+      sync();
+    };
+    q('.hero__slides, .hero__tabbar').forEach((el) => {
+      listen(el, 'pointerenter', (e) => e.pointerType === 'mouse' && holdHover(true));
+      listen(el, 'pointerleave', (e) => e.pointerType === 'mouse' && holdHover(false));
+    });
+    // Only keyboard focus holds the slide; a mouse click on a tab shouldn't.
+    listen(root, 'focusin', (e) => e.target.matches(':focus-visible') && holdFocus(true));
+    listen(root, 'focusout', (e) => !root.contains(e.relatedTarget) && holdFocus(false));
 
-      // Swipe between slides on touch screens (mostly-horizontal swipes only).
-      // Swipes on the 3D garden turn it instead.
-      let touch = null;
+    if (!reduced) {
+      // Scroll parallax: the garden lags behind as the hero leaves.
+      const [parallax] = q('.hero__sculpture');
+      let ticking = false;
       listen(
-        root,
-        'touchstart',
-        (e) => {
-          touch = e.target.closest('.hero-scene') ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        window,
+        'scroll',
+        () => {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            ticking = false;
+            const passed = Math.min(1, Math.max(0, window.scrollY / (root.offsetHeight || 1)));
+            parallax.style.transform = `translateY(${14 * passed}%)`;
+          });
         },
         { passive: true },
       );
-      listen(
-        root,
-        'touchend',
-        (e) => {
-          if (!touch) return;
-          const dx = e.changedTouches[0].clientX - touch.x;
-          const dy = e.changedTouches[0].clientY - touch.y;
-          touch = null;
-          if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5 || current < 0) return;
-          const n = slides.length;
-          go(dx < 0 ? (current + 1) % n : (current - 1 + n) % n);
-        },
-        { passive: true },
-      );
+    }
 
-      go(0);
-    }, root);
+    // Swipe between slides on touch screens (mostly-horizontal swipes only).
+    // Swipes on the 3D garden turn it instead.
+    let touch = null;
+    listen(
+      root,
+      'touchstart',
+      (e) => {
+        touch = e.target.closest('.hero-scene') ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      },
+      { passive: true },
+    );
+    listen(
+      root,
+      'touchend',
+      (e) => {
+        if (!touch) return;
+        const dx = e.changedTouches[0].clientX - touch.x;
+        const dy = e.changedTouches[0].clientY - touch.y;
+        touch = null;
+        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        go(dx < 0 ? (current + 1) % n : (current - 1 + n) % n);
+      },
+      { passive: true },
+    );
+
+    // The first slide is already on screen (it comes with the page); the
+    // slideshow starts from it. One slide alone has nowhere to go.
+    if (n > 1) schedule(0);
 
     return () => {
+      alive = false;
       cleanups.forEach((fn) => fn());
-      ctx.revert();
+      root.getAnimations?.({ subtree: true }).forEach((a) => a.cancel());
     };
   }, [slides]);
 
@@ -254,7 +312,7 @@ export default function Hero() {
             <div
               key={itemKey(slide, i)}
               id={`hero-slide-${i}`}
-              className="hero__slide"
+              className={`hero__slide${i === active ? ' is-active' : ''}`}
               role="tabpanel"
               aria-roledescription="slide"
               aria-labelledby={`hero-tab-${i}`}
@@ -340,12 +398,11 @@ export default function Hero() {
             width="960"
             height="790"
             fetchPriority="high"
-            decoding="async"
           />
           {webgl && (
             <ErrorBoundary>
               <Suspense fallback={null}>
-                <HeroScene apiRef={sceneApi} playingRef={playingRef} onReady={() => setArtReady(true)} />
+                <HeroScene apiRef={sceneApi} playingRef={playingRef} onReady={onSceneReady} />
               </Suspense>
             </ErrorBoundary>
           )}

@@ -108,9 +108,10 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
   `src/data/insights/<slug>.md` — the default articles' text, added when the database is seeded
   (`server/lib/defaults.js`); `src/data/insights.js` — article helpers shared by the site, CMS and API.
 - `src/content/` — loads content from the API for the site.
-- `src/components/` — site sections; `src/components/hero/` — slider and the 3D garden
-  (`HeroScene.jsx`; `scene/garden.js` builds the model in code, `scene/orbit.js` handles drag, wheel,
-  pinch and keyboard).
+- `src/components/` — site sections; `src/components/hero/` — the slideshow (`Hero.jsx`, Web Animations
+  API; it also decides when the 3D scene starts: after the page has loaded and settled, and on phones
+  at the first touch or scroll) and the 3D garden (`HeroScene.jsx`; `scene/garden.js` builds the model
+  in code, in slices of a few milliseconds; `scene/orbit.js` handles drag, wheel, pinch and keyboard).
 - `src/smoothScroll.js` — the site's wheel scrolling: it glides to where the wheel sends it, with a top speed
   (`MAX_SPEED`). Touch, keyboard and scrollbar scrolling are the browser's own, as is everything with reduced motion.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).

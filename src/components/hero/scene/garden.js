@@ -105,8 +105,9 @@ function curvedBeam(half, thickness, rise, depth) {
 // A square, gently sloped roof.
 const pyramid = (r, h) => faceted(new THREE.ConeGeometry(r, h, 4).rotateY(Math.PI / 4).translate(0, h / 2, 0));
 
-// Built in steps, pausing between them (`pause`) so a slow phone stays
-// responsive while it builds.
+// Built in slices: `pause` is awaited often, and yields to the browser only
+// once the current slice has used up its time (see makePause in kit.js), so
+// even a slow phone stays responsive while the garden is built.
 export async function buildGarden({ pause = async () => {} } = {}) {
   const rand = seeded(7);
   const between = (min, max) => min + rand() * (max - min);
@@ -289,6 +290,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
         put('solid', pyramid(0.2, 0.09), at(x, 1.02, z), C.roof);
       }
       for (const y of [0.48, 0.84]) put('lacquer', block(0.07, 0.085, 1.5, 0.015), at(x, y, 0), C.vermilionDark);
+      await pause();
     }
     put('lacquer', block(2.95, 0.15, 0.13, 0.02), at(0, 1.48, 0), C.vermilion);
     put('lacquer', block(3.12, 0.17, 0.2, 0.02), at(0, 1.97, 0), C.vermilion);
@@ -325,6 +327,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       add('solid', pyramid(w * 1.02, 0.2), at(px, y, pz), C.roof);
       add('solid', block(w * 1.42, 0.03, w * 1.42, 0.01), at(px, y - 0.012, pz), C.roofEdge);
       y += 0.13;
+      await pause();
     }
     // The spire.
     add('solid', cylinder(0.012, 0.02, 0.5, 8), at(px, y, pz), C.gold);
@@ -357,6 +360,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
         put('lacquer', block(BRIDGE.length / planks + 0.02, 0.03, 0.03, 0.008), at(x, arch(x) + 0.2, z, { rz: slope }), C.vermilion);
         if (i % 3 === 0) put('lacquer', cylinder(0.02, 0.02, 0.24, 8), at(x, arch(x) + 0.02, z), C.vermilionDark);
       }
+      await pause();
     }
     for (const x of [-half, half]) {
       for (const z of [-0.24, 0.24]) {
@@ -365,11 +369,12 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       }
     }
   }
+  await pause();
 
   // ---------- Trees ----------
   const crown = faceted(new THREE.IcosahedronGeometry(1, 1));
   const disc = faceted(new THREE.IcosahedronGeometry(1, 0));
-  function blossom(x, z, size, palette) {
+  async function blossom(x, z, size, palette) {
     const turn = x * 3 + z;
     add('solid', cylinder(size * 0.07, size * 0.12, size * 0.85, 6), at(x, 0, z, { rz: Math.sin(turn) * 0.12 }), C.trunk);
     const lobes = [
@@ -388,8 +393,9 @@ export async function buildGarden({ pause = async () => {} } = {}) {
         palette[i % palette.length],
       );
     });
+    await pause();
   }
-  function pine(x, z, size) {
+  async function pine(x, z, size) {
     add('solid', cylinder(size * 0.05, size * 0.09, size * 1.3, 6), at(x, 0, z, { rz: 0.1 }), C.trunk);
     [
       [0.1, 0.7, 0.5],
@@ -398,6 +404,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     ].forEach(([dx, dy, r], i) => {
       add('solid', disc, at(x + dx * size, dy * size, z + dx * size * 0.5, { s: r * size, sy: r * size * 0.32, ry: i * 1.3 + x }), C.pine[i]);
     });
+    await pause();
   }
   const cherries = [
     [-0.7, -2.85, 0.95],
@@ -405,19 +412,17 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     [-4.15, 2.95, 0.85],
     [4.25, -1.6, 0.7],
   ];
-  cherries.forEach(([x, z, size]) => blossom(x, z, size, C.cherry));
-  blossom(1.55, -2.55, 0.62, C.maple);
-  blossom(-4.3, -3.1, 0.75, C.maple);
-  blossom(4.2, 1.2, 0.6, C.maple);
-  pine(-4.3, 0.5, 0.95);
-  pine(-4.25, -0.75, 0.7);
-  pine(4.15, 3.05, 0.9);
-  pine(-1.75, -3.3, 0.75);
-
-  await pause();
+  for (const [x, z, size] of cherries) await blossom(x, z, size, C.cherry);
+  await blossom(1.55, -2.55, 0.62, C.maple);
+  await blossom(-4.3, -3.1, 0.75, C.maple);
+  await blossom(4.2, 1.2, 0.6, C.maple);
+  await pine(-4.3, 0.5, 0.95);
+  await pine(-4.25, -0.75, 0.7);
+  await pine(4.15, 3.05, 0.9);
+  await pine(-1.75, -3.3, 0.75);
 
   // ---------- Stone lanterns ----------
-  function lantern(x, z, size = 1) {
+  async function lantern(x, z, size = 1) {
     const s = size;
     add('solid', block(0.2 * s, 0.05 * s, 0.2 * s, 0.01), at(x, 0, z), C.stoneDark);
     add('solid', cylinder(0.035 * s, 0.045 * s, 0.26 * s, 8), at(x, 0.05 * s, z), C.stone);
@@ -434,8 +439,9 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     add('solid', pyramid(0.17 * s, 0.09 * s), at(x, 0.445 * s, z), C.stoneDark);
     add('solid', new THREE.SphereGeometry(0.022 * s, 8, 6), at(x, 0.55 * s, z), C.stone);
     glow(x, 0.4 * s, z, 0.95 * s, C.warm, 0.75);
+    await pause();
   }
-  [
+  for (const [x, z, size] of [
     [-2.25, -2.95, 1.1],
     [-3.75, -1.25, 1.1],
     [1.25, -2.05, 1],
@@ -443,7 +449,9 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     [0.9, 3.45, 1.1],
     [-3.05, 3.2, 1],
     [4.05, -3.0, 1],
-  ].forEach(([x, z, size]) => lantern(x, z, size));
+  ]) {
+    await lantern(x, z, size);
+  }
 
   // ---------- Rocks, bushes and lily pads ----------
   const rock = faceted(new THREE.DodecahedronGeometry(1, 0));
@@ -454,6 +462,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     if (Math.hypot(p.x - BRIDGE.x, p.z - BRIDGE.z) < 0.9) continue;
     const s = between(0.09, 0.22);
     add('solid', rock, at(p.x, between(-0.06, 0.0), p.z, { sx: s, sy: s * between(0.5, 0.8), sz: s * between(0.7, 1.1), ry: rand() * 6 }), C.rock[i % 3]);
+    await pause();
   }
   // Two rocks standing in the water.
   add('solid', rock, at(-1.9, -0.1, 1.5, { sx: 0.34, sy: 0.3, sz: 0.28, ry: 0.6 }), C.rock[0]);
@@ -468,6 +477,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     const s = between(0.08, 0.17);
     add('solid', bush, at(x, s * 0.25, z, { sx: s * 1.3, sy: s * 0.8, sz: s * 1.2, ry: rand() * 6 }), rand() < 0.7 ? C.mossLight : C.pine[0]);
     placed += 1;
+    await pause();
   }
 
   const pad = new THREE.CircleGeometry(1, 9, 0.5, Math.PI * 2 - 0.9).rotateX(-Math.PI / 2);
@@ -480,9 +490,8 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     add('solid', pad, at(x, WATER + 0.008, z, { s, ry: rand() * 6 }), C.pad, { reflect: false, shadow: false });
     if (placed % 4 === 0) add('solid', petal, at(x, WATER + 0.035, z, { sx: s * 0.45, sy: s * 0.4, sz: s * 0.45, ry: rand() }), C.lotus, { reflect: false });
     placed += 1;
+    await pause();
   }
-
-  await pause();
 
   // ---------- Koi ----------
   {
@@ -490,7 +499,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     const tailGeometry = new THREE.ConeGeometry(0.045, 0.1, 4).rotateZ(Math.PI / 2).scale(1, 0.5, 1).translate(-0.05, 0, 0);
     extra.push(bodyGeometry, tailGeometry);
     const paints = ['#ff7a2e', '#fff1e6', '#ffb347', '#ff5a36', '#ffffff', '#ff8f4a', '#f7c873'];
-    paints.forEach((paint, i) => {
+    for (const [i, paint] of paints.entries()) {
       const material = new THREE.MeshBasicMaterial({ color: paint });
       extra.push(material);
       const fish = new THREE.Group();
@@ -513,7 +522,8 @@ export async function buildGarden({ pause = async () => {} } = {}) {
         fish.rotation.y = -Math.atan2(Math.cos(a) * rz * speed, -Math.sin(a) * rx * speed);
         tail.rotation.y = Math.sin(t * 6 + phase) * 0.5;
       });
-    });
+      await pause();
+    }
   }
 
   // ---------- Lanterns afloat ----------
@@ -532,7 +542,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       [0.6, 2.4],
       [-1.2, -0.9],
     ];
-    spots.forEach(([x, z], i) => {
+    for (const [i, [x, z]] of spots.entries()) {
       const boat = new THREE.Group();
       const light = new THREE.Mesh(paper, paperMaterial);
       light.position.y = 0.014;
@@ -548,7 +558,8 @@ export async function buildGarden({ pause = async () => {} } = {}) {
         boat.position.set(x + Math.sin(t * 0.11 + phase) * 0.22, WATER + Math.sin(t * 1.3 + phase) * 0.006, z + Math.cos(t * 0.09 + phase) * 0.18);
         boat.rotation.y = t * 0.05 + phase;
       });
-    });
+      await pause();
+    }
   }
 
   // ---------- Ripples ----------
@@ -584,6 +595,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
         mesh.scale.setScalar(0.14 + f * reach);
         material.opacity = 0.34 * (1 - f) ** 1.5;
       });
+      await pause();
     }
   }
 
@@ -630,7 +642,6 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     place(0);
     movers.push(place);
   }
-
   await pause();
 
   // ---------- Halos, reflections and the merged static parts ----------
@@ -678,16 +689,15 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   halos.renderOrder = 4;
   group.add(halos);
   extra.push(haloGeometry, haloMaterial);
-
   await pause();
-  const reflections = mirror.build({ mirror: mirrorMaterial }, { castShadow: false, receiveShadow: false });
+
+  const reflections = await mirror.build({ mirror: mirrorMaterial }, { castShadow: false, receiveShadow: false, pause });
   reflections.children.forEach((mesh) => {
     mesh.renderOrder = 1;
   });
   group.add(reflections);
 
-  await pause();
-  const statics = batch.build(materials);
+  const statics = await batch.build(materials, { pause });
   group.add(statics);
 
   return {

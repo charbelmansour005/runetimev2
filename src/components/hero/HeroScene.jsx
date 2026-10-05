@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { BOUNDS, buildGarden } from './scene/garden';
-import { nextTask } from './scene/kit';
+import { makePause, yieldNow } from './scene/kit';
 import { createOrbit, HOME } from './scene/orbit';
 
 const FOV = 30;
@@ -42,10 +42,11 @@ function fitDistance(aspect) {
   return distance;
 }
 
-// A miniature Japanese garden at dusk (a torii gate in a pond): the same on every slide, and the visitor can
-// turn it and zoom in. Built in code after the headline has painted; the
-// poster stands in until then (and stays without WebGL or with Data Saver on).
-export default function HeroScene({ apiRef, playingRef, onReady }) {
+// A miniature Japanese garden at dusk (a torii gate in a pond): the same on
+// every slide, and the visitor can turn it and zoom in. Built in code once
+// the page has settled (Hero.jsx decides when); the poster stands in until
+// then, and stays without WebGL.
+function HeroScene({ apiRef, playingRef, onReady }) {
   const mountRef = useRef(null);
   const keyRef = useRef(null);
   const onReadyRef = useRef(onReady);
@@ -54,10 +55,12 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
-    if (navigator.connection?.saveData) return undefined;
     const mount = mountRef.current;
     let disposed = false;
-    let teardown = () => {};
+    // Everything setup() creates is released through here, newest first, so
+    // leaving the page halfway through the build frees it all the same.
+    const resources = [];
+    const teardown = () => resources.splice(0).reverse().forEach((release) => release());
 
     async function setup() {
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -74,6 +77,14 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
       renderer.toneMappingExposure = 1.05;
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFShadowMap;
+      // Nothing that casts a shadow ever moves, so the shadow map is drawn
+      // once (needsUpdate below), not every frame.
+      renderer.shadowMap.autoUpdate = false;
+      resources.push(() => {
+        renderer.dispose();
+        renderer.forceContextLoss();
+        renderer.domElement.remove();
+      });
 
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 80);
@@ -90,14 +101,14 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
       const rim = new THREE.DirectionalLight('#7c6cf0', 1.6);
       rim.position.set(6, 3, -7);
       scene.add(key, key.target, rim);
+      resources.push(() => key.dispose());
 
-      await nextTask();
-      if (disposed) return;
-      const garden = await buildGarden({ pause: nextTask });
-      if (disposed) {
-        garden.dispose();
-        return;
-      }
+      await yieldNow();
+      if (disposed) return teardown();
+      // Built in slices of a few milliseconds, so the page stays responsive.
+      const garden = await buildGarden({ pause: makePause(6) });
+      resources.push(() => garden.dispose());
+      if (disposed) return teardown();
       scene.add(garden.group);
 
       // --- Camera ------------------------------------------------------------
@@ -117,6 +128,11 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
         },
       });
       keyRef.current = orbit.onKey;
+      resources.push(() => {
+        orbit.dispose();
+        keyRef.current = null;
+        apiRef.current = null;
+      });
 
       const placeCamera = () => {
         const view = orbit.state;
@@ -166,21 +182,29 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
       let raf = 0;
       let looping = false;
       let visible = true;
-      let last = 0;
+      let lastDraw = 0;
       let settling = true;
       const playing = () => !reduced && (playingRef?.current ?? true);
       const frameTimes = [];
       const frame = (now) => {
-        const dt = Math.min((now - last) / 1000, 0.05);
-        last = now;
+        // 60 frames a second is plenty for the garden: on a 120 Hz screen
+        // (frames 8.3 ms apart) draw every other one. Slower screens, 90 and
+        // 100 Hz included, draw every frame.
+        if (now - lastDraw < 9) {
+          raf = requestAnimationFrame(frame);
+          return;
+        }
+        const dt = Math.min((now - lastDraw) / 1000, 0.05);
+        lastDraw = now;
         wall += dt;
         if (playing()) sceneTime += dt;
         settling = orbit.step(dt);
         render();
-        // A slow device draws fewer pixels rather than dropping frames.
+        // A slow device (under about 38 frames a second) draws fewer pixels
+        // rather than dropping frames.
         if (playing()) {
           frameTimes.push(dt);
-          if (frameTimes.length === 90) {
+          if (frameTimes.length === 60) {
             const average = frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
             frameTimes.length = 0;
             if (average > 0.026 && pixelRatio > 1) {
@@ -200,61 +224,48 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
         settling = true;
         if (looping || !visible || !compiled) return;
         looping = true;
-        last = performance.now();
+        lastDraw = performance.now();
         raf = requestAnimationFrame(frame);
       }
       const io = new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting;
         wake();
       });
+      resources.push(() => {
+        cancelAnimationFrame(raf);
+        io.disconnect();
+      });
 
       mount.appendChild(renderer.domElement);
+      // A lost and restored context starts with an empty shadow map.
+      renderer.domElement.addEventListener('webglcontextrestored', () => {
+        renderer.shadowMap.needsUpdate = true;
+        wake();
+      });
       const ro = new ResizeObserver(resize);
       ro.observe(mount);
+      resources.push(() => ro.disconnect());
       resize();
       // Compile the shaders off the main thread where the browser can, then draw.
       await renderer.compileAsync(scene, camera).catch(() => {});
       compiled = true;
-      if (disposed) {
-        orbit.dispose();
-        garden.dispose();
-        renderer.dispose();
-        return;
-      }
+      if (disposed) return teardown();
+      renderer.shadowMap.needsUpdate = true;
       render();
       io.observe(mount);
 
       // The pause button stops the garden too.
       apiRef.current = { setPlaying: () => wake() };
-
-      teardown = () => {
-        cancelAnimationFrame(raf);
-        io.disconnect();
-        ro.disconnect();
-        orbit.dispose();
-        apiRef.current = null;
-        keyRef.current = null;
-        garden.dispose();
-        key.dispose();
-        renderer.dispose();
-        renderer.forceContextLoss();
-        renderer.domElement.remove();
-      };
     }
 
-    // Build it once the browser is idle, so it doesn't hold up the headline.
-    const whenIdle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 200));
-    const cancelIdle = window.cancelIdleCallback ?? clearTimeout;
-    const idle = whenIdle(
-      () =>
-        setup().catch((err) => {
-          if (process.env.NODE_ENV !== 'production') console.error(err); // The poster stays.
-        }),
-      { timeout: 1500 },
-    );
+    // The code has only just arrived: let the browser paint first.
+    yieldNow()
+      .then(() => (disposed ? undefined : setup()))
+      .catch((err) => {
+        if (process.env.NODE_ENV !== 'production') console.error(err); // The poster stays.
+      });
     return () => {
       disposed = true;
-      cancelIdle(idle);
       teardown();
     };
   }, [apiRef, playingRef]);
@@ -279,3 +290,6 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
     </div>
   );
 }
+
+// Slide changes re-render the hero; the scene has nothing to re-render for.
+export default memo(HeroScene);

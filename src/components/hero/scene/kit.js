@@ -51,7 +51,8 @@ export class Batch {
     return this;
   }
 
-  static merge(parts) {
+  // `pause` is awaited after each part, so a big merge is built in slices.
+  static async merge(parts, pause = async () => {}) {
     const count = parts.reduce((sum, { geometry: g }) => sum + (g.index ?? g.getAttribute('position')).count, 0);
     const positions = new Float32Array(count * 3);
     const normals = new Float32Array(count * 3);
@@ -86,6 +87,7 @@ export class Batch {
         colors[o + 2] = c.b;
         o += 3;
       }
+      await pause();
     }
     const merged = new THREE.BufferGeometry();
     merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -96,16 +98,17 @@ export class Batch {
   }
 
   // One mesh per material; `materials` maps a key to its material.
-  build(materials, { castShadow = true, receiveShadow = true } = {}) {
+  async build(materials, { castShadow = true, receiveShadow = true, pause = async () => {} } = {}) {
     const group = new THREE.Group();
     for (const [bucket, parts] of this.parts) {
       const [key, flag] = bucket.split(':');
-      const merged = Batch.merge(parts);
+      const merged = await Batch.merge(parts, pause);
       const mesh = new THREE.Mesh(merged, materials[key]);
       mesh.castShadow = castShadow && flag !== 'noshadow' && materials[key].userData.shadow !== false;
       mesh.receiveShadow = receiveShadow && materials[key].userData.shadow !== false;
       mesh.matrixAutoUpdate = false;
       group.add(mesh);
+      await pause();
     }
     this.parts.clear();
     return group;
@@ -148,5 +151,29 @@ export function glowSprite(tint, size, opacity = 1) {
   return sprite;
 }
 
-// Lets the main thread breathe between build steps.
-export const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
+// Hands the main thread back to the browser (to paint, or answer input) and
+// carries on in a new task. A MessageChannel rather than setTimeout: nested
+// timeouts are held back by 4 ms each after a few in a row.
+export function yieldNow() {
+  if (globalThis.scheduler?.yield) return globalThis.scheduler.yield();
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(0);
+  });
+}
+
+// A `pause` for building in slices: it yields only once the current slice has
+// used up its budget (ms), so a build never holds the page for long, and a
+// fast machine isn't slowed by needless yields.
+export function makePause(budget = 6) {
+  let start = performance.now();
+  return async () => {
+    if (performance.now() - start < budget) return;
+    await yieldNow();
+    start = performance.now();
+  };
+}

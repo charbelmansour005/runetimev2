@@ -212,11 +212,17 @@
   align-self: center;
 }
 
-/* Only the first slide shows in the page as it arrives; the slideshow takes
-   over from there (its inline styles win over this). */
-.hero__slide:not(:first-child) {
+/* Only the active slide shows. The page arrives with the first one active,
+   so it's on screen before any JavaScript runs. */
+.hero__slide:not(.is-active) {
   visibility: hidden;
-  opacity: 0;
+}
+
+/* The headline and button keep their own layer while they're the ones on
+   screen, so landing after a sweep doesn't repaint them. */
+.hero__slide.is-active .hero__title,
+.hero__slide.is-active .hero__cta {
+  will-change: transform;
 }
 
 .hero__title {
