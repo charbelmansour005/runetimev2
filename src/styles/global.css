@@ -389,13 +389,7 @@ button {
   }
 }
 
-/* ---------- Boot screen while the CMS content loads ---------- */
-
-.boot {
-  position: fixed;
-  inset: 0;
-  background: var(--grad-hero);
-}
+/* ---------- When a page fails (app/error.jsx) ---------- */
 
 .crashed {
   display: grid;

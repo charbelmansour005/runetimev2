@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { config } from '../config.js';
+import { connectOnce } from '../db.js';
 import { SiteContent } from '../models/SiteContent.js';
 import { seedContent } from './defaults.js';
 import { User } from '../models/User.js';
@@ -30,3 +31,7 @@ export async function bootstrap() {
     }
   }
 }
+
+// Connects (once) and runs the first-run setup. Rejects while the database is
+// unreachable.
+export const ensureDb = () => connectOnce(config.mongoUri, { onConnected: bootstrap });

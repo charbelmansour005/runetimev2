@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Logo from './Logo';
+import PageLink from './PageLink';
 import { Arrow, Caret } from './Icons';
 import { useContent } from '../content/ContentProvider';
 import './Header.css';
@@ -13,8 +15,6 @@ const NAV = [
   { label: 'Insights', href: '/insights' },
   { label: 'Contact', href: '/#contact' },
 ];
-
-const currentPath = () => window.location.pathname.replace(/\/+$/, '') || '/';
 
 // Dropdown links and promos come from the matching CMS sections.
 function useMenus() {
@@ -55,6 +55,7 @@ function MegaMenu({ id, menu, onNavigate }) {
 // Desktop navigation. Dropdowns open on hover, or with their caret button
 // (keyboard and touch); Escape, clicking elsewhere or tabbing away closes them.
 function DesktopNav({ menus }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(null);
   const [dismissed, setDismissed] = useState(false);
   const navRef = useRef(null);
@@ -94,9 +95,9 @@ function DesktopNav({ menus }) {
               if (item.menu && open === item.menu && !e.currentTarget.contains(e.relatedTarget)) setOpen(null);
             }}
           >
-            <a className="nav__link" href={item.href} aria-current={item.href === currentPath() ? 'page' : undefined}>
+            <PageLink className="nav__link" href={item.href} aria-current={item.href === pathname ? 'page' : undefined}>
               {item.label}
-            </a>
+            </PageLink>
             {item.menu && (
               <>
                 <button
@@ -126,6 +127,7 @@ function DesktopNav({ menus }) {
 }
 
 function MobileMenu({ open, onClose, menus, menuRef }) {
+  const pathname = usePathname();
   const [expanded, setExpanded] = useState(null);
   const { brand } = useContent();
 
@@ -159,15 +161,15 @@ function MobileMenu({ open, onClose, menus, menuRef }) {
                   </ul>
                 </>
               ) : (
-                <a
+                <PageLink
                   className="mobile-menu__link"
                   href={item.href}
                   onClick={onClose}
                   tabIndex={open ? 0 : -1}
-                  aria-current={item.href === currentPath() ? 'page' : undefined}
+                  aria-current={item.href === pathname ? 'page' : undefined}
                 >
                   {item.label}
-                </a>
+                </PageLink>
               )}
             </li>
           ))}

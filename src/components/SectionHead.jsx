@@ -1,3 +1,4 @@
+import PageLink from './PageLink';
 import Reveal from './Reveal';
 
 export default function SectionHead({ title, intro, action, tone = 'accent', id }) {
@@ -8,9 +9,9 @@ export default function SectionHead({ title, intro, action, tone = 'accent', id 
           {title}
         </h2>
         {action && (
-          <a className={`btn btn--${tone}`} href={action.href}>
+          <PageLink className={`btn btn--${tone}`} href={action.href}>
             {action.label}
-          </a>
+          </PageLink>
         )}
       </div>
       {intro && <p className="section-intro">{intro}</p>}

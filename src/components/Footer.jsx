@@ -1,4 +1,5 @@
 import Logo from './Logo';
+import PageLink from './PageLink';
 import { SocialIcon } from './Icons';
 import { useContent } from '../content/ContentProvider';
 import './Footer.css';
@@ -42,7 +43,7 @@ export default function Footer() {
               <ul>
                 {PRIMARY_LINKS.map((link) => (
                   <li key={link.label}>
-                    <a href={link.href}>{link.label}</a>
+                    <PageLink href={link.href}>{link.label}</PageLink>
                   </li>
                 ))}
               </ul>

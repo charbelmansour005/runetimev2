@@ -3,8 +3,8 @@ import { SiteContent } from '../models/SiteContent.js';
 import { readMinutes } from '../../src/data/insights.js';
 
 const INTERNAL_FIELDS = ['_id', '__v', 'key', 'createdAt'];
-// On Vercel the CDN caches /api/content instead (see routes/public.js), and a
-// save may land on a different function instance, so skip the memory cache.
+// On Vercel a save may land on a different function instance, so skip the
+// memory cache there; the pages themselves are cached by Next (see site.js).
 const CACHE_TTL_MS = config.isVercel ? 0 : 30_000;
 let cache = { value: null, at: 0 };
 
@@ -41,7 +41,8 @@ function toPublic(site) {
   };
 }
 
-// The public site reads this on every page view, so keep it in memory briefly.
+// Read for every page that's rendered and by the public API, so keep it in
+// memory briefly.
 async function load() {
   if (cache.value && Date.now() - cache.at < CACHE_TTL_MS) return cache.value;
   const doc = await SiteContent.getSingleton().lean();

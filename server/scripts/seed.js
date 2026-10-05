@@ -1,6 +1,7 @@
 // npm run seed            → create the default content and first admin if missing
 // npm run seed -- --reset → overwrite the site content with the defaults
 //                           (CMS users and contact messages are kept)
+import 'dotenv/config';
 import mongoose from 'mongoose';
 import { config } from '../config.js';
 import { bootstrap } from '../lib/bootstrap.js';

@@ -1,32 +1,35 @@
 # Runtime Collective — website + CMS
 
-- **Site**: React + Vite landing page (layout and motion modelled on eurisko.net; visuals are built in code).
-- **API**: Node.js + Express 5 + MongoDB (Mongoose) in `server/`.
+Built with **Next.js 15** (App Router, React 19).
+
+- **Site**: the landing page and its sub-pages, rendered on the server and cached (layout and motion
+  modelled on eurisko.net; visuals are built in code).
+- **API**: Next.js route handlers in `src/app/api/`, with MongoDB (Mongoose) code in `server/`.
 - **CMS**: a content studio at **`/admin`** for editing every section of the site and reading contact-form messages.
 
-The site loads its content from the API and falls back to the built-in defaults
-(`src/data/content.js`) if the API or database is unreachable, so it never shows a blank page.
+Pages are built ahead of time from the CMS content and rebuilt the moment the CMS saves (and at most
+every 5 minutes). If the database is unreachable while building, the built-in defaults
+(`src/data/content.js`) are used, so the site never shows a blank page.
 
 ## Getting started
 
 ```bash
 npm install
 cp .env.example .env   # then fill in MONGODB_URI, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
-npm run dev:all        # site on http://localhost:5173, API on http://localhost:4000
+npm run dev            # site, API and CMS on http://localhost:3000
 ```
 
-Then open **http://localhost:5173/admin** and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
-On first start the API creates the site content from the defaults and that first admin
+Then open **http://localhost:3000/admin** and sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+The first time it connects to the database, the app creates the site content from the defaults and that first admin
 account. Change the password under **Account** afterwards.
 
-Requires Node 18+. (Vite 6, Mongoose 8 and concurrently 9 are pinned for Node 18; on Node 20+ they can be upgraded.)
+Requires Node 18.18+. (Next.js 15 and Mongoose 8 are the newest that run on Node 18; on Node 20+ they can be upgraded.)
 
 | Script | What it does |
 | --- | --- |
-| `npm run dev:all` | Site (Vite) and API (Express, auto-restart) together |
-| `npm run dev` / `npm run dev:server` | Just the site / just the API |
-| `npm run build` | Production build of the site into `dist/` |
-| `npm start` | Production server: API + the built site from `dist/` on `PORT` |
+| `npm run dev` | Development server (site, API and CMS) with hot reload |
+| `npm run build` | Production build into `.next/` |
+| `npm start` | Production server on port 3000 (`npm start -- -p 8080` for another) |
 | `npm run seed` | Create default content / first admin if missing |
 | `npm run seed -- --reset` | Overwrite the site content with the defaults (keeps users and messages) |
 
@@ -57,23 +60,20 @@ phone number (required) and a Call button. Spam is filtered with a honeypot fiel
 
 ### Vercel
 
-The repo is ready for Vercel: the site is served from Vercel's CDN, and `api/index.js` runs the
-Express API as a serverless function (`vercel.json` routes every `/api/*` request to it, plus article
-pages and `sitemap.xml`).
+Vercel detects Next.js and needs no configuration.
 
-1. In Vercel: **Add New → Project → Import** this GitHub repo. Framework (Vite), build command and
-   output folder come from `vercel.json` — leave them as they are.
+1. In Vercel: **Add New → Project → Import** this GitHub repo and keep the detected settings.
 2. Under **Environment Variables** add `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`
-   (you can paste your whole `.env` into the first *Key* field and Vercel splits it up).
+   (you can paste your whole `.env` into the first *Key* field and Vercel splits it up). Tick Preview as
+   well as Production if preview deployments should work.
 3. In MongoDB Atlas → **Network Access**, allow access from anywhere (`0.0.0.0/0`): Vercel functions
    don't have fixed IP addresses. Keep the database user's password long and random.
 4. Deploy. The site is live at `https://<project>.vercel.app`, the CMS at `/admin`.
 
 Optional: Vercel → Settings → Functions → set the function region closest to your Atlas cluster.
 
-On Vercel, `/api/content` is cached at the edge for 10 seconds and refreshed in the background, so
-visitors never wait for a cold function and CMS saves appear within a few seconds. Rate limits are
-kept per function instance.
+Pages are served from Vercel's cache, so visitors never wait on the database. Rate limits are kept per
+function instance.
 
 ### Any other Node host (Render, Railway, a VPS…)
 
@@ -84,8 +84,8 @@ npm ci && npm run build
 NODE_ENV=production npm start
 ```
 
-Set `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `NODE_ENV=production` on the
-host, plus `TRUST_PROXY=1` when running behind a proxy/load balancer (most platforms). Serve it over
+Set `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` on the host, plus `TRUST_PROXY=1`
+when running behind a proxy/load balancer (most platforms), so rate limits count per visitor. Serve it over
 HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow the host's IP under
 **Network Access**.
 
@@ -94,7 +94,7 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 | Method & path | Auth | Purpose |
 | --- | --- | --- |
 | `GET /api/health` | — | Liveness + database status |
-| `GET /api/content` | — | All site content |
+| `GET /api/content`, `GET /api/insights/:slug` | — | Site content / one article, as JSON |
 | `POST /api/contact` | — | Contact form → inbox |
 | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` | — / session | CMS sign-in |
 | `GET /api/admin/content` | session | Content for editing |
@@ -114,18 +114,19 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `src/smoothScroll.js` — the site's wheel scrolling: it glides to where the wheel sends it, with a top speed
   (`MAX_SPEED`). Touch, keyboard and scrollbar scrolling are the browser's own, as is everything with reduced motion.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
-- `server/` — Express app, Mongoose models (`models/SiteContent.js` validates content), routes and middleware.
-- `api/index.js` + `vercel.json` — the Vercel serverless entry and routing/headers config. Only real pages
-  (`/`, `/work`, `/insights`, `/insights/<slug>`, `/admin`) get the app; anything else is a real 404 (`public/404.html`).
-- `server/routes/pages.js` — article pages and `sitemap.xml`, built from the CMS content: each article
-  page is `insights.html` with the article's title, summary, canonical URL and JSON-LD in its head and
-  the article embedded; unknown articles get the 404 page with a 404 status.
-- `src/pages/` — pages other than the home page (`/work`, `/insights`, `/insights/<slug>`). `src/content/Markdown.jsx`
-  renders article text (React elements only, never raw HTML). `src/BelowFold.jsx` — the home page below
-  the hero, rendered just after the hero paints.
-- `vite.config.js` — besides the build, it writes `work.html`, `insights.html` and `admin.html` (each with its own
-  title, description, canonical and Open Graph tags) and `robots.txt`, using the production domain
-  (`VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override; see `server/lib/html.js`).
+- `src/app/` — the Next.js routes. `(site)/` holds the public pages (its `layout.jsx` reads the CMS content
+  on the server and hands it to the components); `admin/` loads the CMS; `api/` is the API; `sitemap.js`,
+  `robots.js`, `not-found.jsx` (a real 404 for anything that isn't a page) and `error.jsx`. `meta.js` builds
+  each page's title, description, canonical and Open Graph tags.
+- `src/views/` — the pages' components (`/work`, `/insights`, `/insights/<slug>`); `src/App.jsx` is the home
+  page and `src/BelowFold.jsx` everything under its hero. `src/content/Markdown.jsx` renders article text
+  (React elements only, never raw HTML).
+- `server/` — database code used by the routes: Mongoose models (`models/SiteContent.js` validates content),
+  `lib/site.js` (what pages render from), `http.js` (the wrapper every API route uses: database, sign-in,
+  errors), `session.js` and `rateLimit.js`.
+- `next.config.mjs` — security headers (CSP and friends) and the old `.html` redirects. The site address for
+  canonical URLs and the sitemap comes from `VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override
+  (`siteUrl()` in `server/config.js`).
 - `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's poster
   (`hero-poster.webp` and `hero-poster-640.webp`): a still of the 3D campus at its starting view, shown
   until WebGL draws it. Whenever the campus or its lighting changes, re-render it with the site running
@@ -135,7 +136,8 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 ## Security notes
 
 - Passwords are hashed with bcrypt; sessions are signed JWTs in an httpOnly, SameSite=Strict cookie.
-- Sign-in and the contact form are rate limited; security headers (CSP, HSTS, etc.) come from Helmet.
+- Sign-in and the contact form are rate limited; security headers (CSP etc.) are set in `next.config.mjs`.
+  Scripts are limited to this site's own, plus the inline ones Next.js needs.
 - `.env` holds secrets and is git-ignored — keep it out of version control.
 
 ## Troubleshooting

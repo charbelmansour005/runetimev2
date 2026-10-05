@@ -1,3 +1,5 @@
+*Update, October 2026: the site has since moved to Next.js, which gives every page its own HTML and answers unknown addresses with a real 404. The problem below, and the ten-second check at the end, apply to any single-page app.*
+
 When we audited our own site, Lighthouse’s SEO check failed on one item: **robots.txt is not valid, 19 errors found**. We had never written a robots.txt, so where did 19 errors come from?
 
 From our home page. Like a lot of single-page apps on Vercel, our config had a catch-all rewrite:

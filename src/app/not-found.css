@@ -1,0 +1,61 @@
+.not-found {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background: var(--grad-hero);
+  color: rgba(255, 255, 255, 0.78);
+  text-align: center;
+}
+
+.not-found__inner {
+  max-width: 480px;
+}
+
+.not-found svg {
+  width: 34px;
+  height: 40px;
+  margin: 0 auto;
+}
+
+.not-found__code {
+  margin: 28px 0 8px;
+  color: var(--lilac);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+}
+
+.not-found h1 {
+  margin: 0;
+  color: var(--white);
+  font-size: clamp(32px, 6vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.not-found__text {
+  margin: 16px 0 32px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.not-found a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 26px;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--violet);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.not-found a:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 3px;
+}

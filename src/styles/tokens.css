@@ -33,7 +33,7 @@
     #0e0e0e;
 
   /* Type */
-  --font: 'Montserrat Variable', 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font: var(--font-montserrat), 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   /* Layout */
   --container: 1240px;

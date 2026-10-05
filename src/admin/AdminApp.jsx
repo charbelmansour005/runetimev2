@@ -187,18 +187,11 @@ export default function AdminApp() {
   const [user, setUser] = useState(undefined); // undefined = checking, null = signed out
 
   useEffect(() => {
-    document.title = 'Content studio — Runtime Collective';
-    const robots = document.createElement('meta');
-    robots.name = 'robots';
-    robots.content = 'noindex, nofollow';
-    document.head.appendChild(robots);
-
     setUnauthorizedHandler(() => setUser(null));
     api
       .me()
       .then(({ user: me }) => setUser(me))
       .catch(() => setUser(null));
-    return () => robots.remove();
   }, []);
 
   if (user === undefined) return <div className="cms-boot" aria-busy="true" />;

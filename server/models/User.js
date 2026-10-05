@@ -16,4 +16,4 @@ userSchema.methods.toSafeJSON = function toSafeJSON() {
   return { id: this.id, email: this.email, name: this.name };
 };
 
-export const User = mongoose.model('User', userSchema);
+export const User = mongoose.models.User || mongoose.model('User', userSchema);

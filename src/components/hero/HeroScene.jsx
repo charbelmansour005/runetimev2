@@ -248,7 +248,7 @@ export default function HeroScene({ apiRef, playingRef, onReady }) {
     const idle = whenIdle(
       () =>
         setup().catch((err) => {
-          if (import.meta.env.DEV) console.error(err); // The poster stays.
+          if (process.env.NODE_ENV !== 'production') console.error(err); // The poster stays.
         }),
       { timeout: 1500 },
     );

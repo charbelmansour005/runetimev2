@@ -3,11 +3,11 @@
 // cropped around the point the camera aims at so it lines up with the scene.
 //
 // With the site running locally (npm run build && npm start):
-//   npx -p puppeteer-core node scripts/render-poster.mjs [http://localhost:4000/]
+//   npx -p puppeteer-core node scripts/render-poster.mjs [http://localhost:3000/]
 // Set CHROME to Chrome's path if it isn't in the usual macOS place.
 import { writeFileSync } from 'node:fs';
 
-const url = process.argv[2] ?? 'http://localhost:4000/';
+const url = process.argv[2] ?? 'http://localhost:3000/';
 const chrome = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 let puppeteer;
 try {

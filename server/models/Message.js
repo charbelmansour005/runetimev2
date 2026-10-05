@@ -42,4 +42,4 @@ const messageSchema = new mongoose.Schema(
 
 messageSchema.index({ createdAt: -1 });
 
-export const Message = mongoose.model('Message', messageSchema);
+export const Message = mongoose.models.Message || mongoose.model('Message', messageSchema);

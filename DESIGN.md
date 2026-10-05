@@ -28,7 +28,7 @@ format so people and AI agents can extend the site without drifting from it. Tok
 
 | Token | Hex | Role |
 |---|---|---|
-| `--void` | `#0D0016` | Hero/page background, theme colour, boot screen |
+| `--void` | `#0D0016` | Hero/page background, theme colour |
 | `--dusk` | `#4F435E` | End of the hero gradient |
 | `--ink-900` | `#0E0E0E` | Dark band base, strongest text on light |
 | `--ink-700` | `#333333` | Headings and titles on light surfaces |
@@ -60,7 +60,7 @@ hints only). Never go below 60%.
 
 ## 3. Typography Rules
 
-Single family: **Montserrat Variable** (self-hosted, `font-display: swap`, latin file preloaded).
+Single family: **Montserrat** variable (self-hosted by `next/font`, `font-display: swap`, latin file preloaded).
 Fallback: `system-ui, -apple-system, 'Segoe UI', sans-serif`.
 
 | Role | Size | Weight | Line height | Letter spacing |
@@ -252,5 +252,5 @@ There's no elevation scale yet. The site has 24 distinct one-off shadows. Use th
 - "Build a dark band like the Industries section: `--grad-dark`, white title, 86% white body, a
   white `.btn--ghost` action, and an accessible tab list (roving tabindex, arrow keys)."
 - "Create a sub-page like `/work` or `/insights`: dark `.page-hero` band with breadcrumb, then content on white,
-  reusing Header and Footer, with its own static `<head>` entry in PAGES (`server/lib/html.js`), a rewrite
-  in `vercel.json` and a route in `src/main.jsx`."
+  reusing Header and Footer: a client component in `src/views/` and a `page.jsx` under `src/app/(site)/`
+  that sets its title and description with `pageMeta` (`src/app/meta.js`)."

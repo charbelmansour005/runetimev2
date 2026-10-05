@@ -1,4 +1,6 @@
-import 'dotenv/config';
+// Settings from the environment (.env locally, the host's settings in
+// production). Read on first use, not at import: `next build` imports every
+// route, and must work on a machine that has no secrets.
 
 function required(name) {
   const value = process.env[name]?.trim();
@@ -11,24 +13,37 @@ function required(name) {
 }
 
 const isProd = process.env.NODE_ENV === 'production';
-// Set automatically on Vercel, where the API runs as a serverless function.
+// Set automatically on Vercel.
 const isVercel = Boolean(process.env.VERCEL);
 
 export const config = {
   isProd,
   isVercel,
-  port: Number(process.env.PORT) || 4000,
-  mongoUri: required('MONGODB_URI'),
-  jwtSecret: required('JWT_SECRET'),
-  adminEmail: process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? '',
-  adminPassword: process.env.ADMIN_PASSWORD ?? '',
+  get mongoUri() {
+    return required('MONGODB_URI');
+  },
+  get jwtSecret() {
+    const secret = required('JWT_SECRET');
+    if (secret.length < 32) throw new Error('JWT_SECRET must be at least 32 characters long.');
+    return secret;
+  },
+  get adminEmail() {
+    return process.env.ADMIN_EMAIL?.trim().toLowerCase() ?? '';
+  },
+  get adminPassword() {
+    return process.env.ADMIN_PASSWORD ?? '';
+  },
   // Session cookies are Secure (HTTPS-only) in production unless overridden.
-  cookieSecure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProd || isVercel,
-  // Number of reverse proxies in front of the app (e.g. 1 on Render/Railway/Heroku).
-  // Vercel's edge is one hop, so client IPs (used for rate limiting) come from X-Forwarded-For.
-  trustProxy: Number(process.env.TRUST_PROXY) || (isVercel ? 1 : 0),
+  get cookieSecure() {
+    return process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === 'true' : isProd || isVercel;
+  },
 };
 
-if (config.jwtSecret.length < 32) {
-  throw new Error('JWT_SECRET must be at least 32 characters long.');
-}
+// The public address, for canonical and Open Graph URLs, robots.txt and the
+// sitemap. On Vercel it follows the production domain; SITE_URL overrides it.
+export const siteUrl = () =>
+  (
+    process.env.SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) ||
+    'https://runtimecollective.vercel.app'
+  ).replace(/\/+$/, '');

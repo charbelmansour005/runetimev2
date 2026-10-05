@@ -291,4 +291,4 @@ siteContentSchema.statics.getSingleton = function getSingleton() {
   return this.findOne({ key: 'site' });
 };
 
-export const SiteContent = mongoose.model('SiteContent', siteContentSchema);
+export const SiteContent = mongoose.models.SiteContent || mongoose.model('SiteContent', siteContentSchema);

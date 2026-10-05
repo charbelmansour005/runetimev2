@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { defaultContent } from '../../src/data/content.js';
 
 // The text of a default article, from src/data/insights/<slug>.md. The site
 // itself only bundles the cards, so the text is added when seeding.
 function articleText(slug) {
   try {
-    return readFileSync(new URL(`../../src/data/insights/${slug}.md`, import.meta.url), 'utf8').trim();
+    return readFileSync(path.join(process.cwd(), 'src/data/insights', `${slug}.md`), 'utf8').trim();
   } catch {
     return '';
   }

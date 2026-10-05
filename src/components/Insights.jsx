@@ -1,3 +1,4 @@
+import PageLink from './PageLink';
 import Reveal from './Reveal';
 import SectionHead from './SectionHead';
 import { GLYPHS } from '../data/glyphs';
@@ -52,10 +53,10 @@ export function PostCard({ post, delay = 0 }) {
   return (
     <Reveal as="article" className={`post-card${href ? ' is-linked' : ''}`} delay={delay}>
       {href ? (
-        <a className="post-card__link" {...linkProps(href)}>
+        <PageLink className="post-card__link" {...linkProps(href)}>
           {content}
           {external && <span className="sr-only">(opens in a new tab)</span>}
-        </a>
+        </PageLink>
       ) : (
         <div className="post-card__link">{content}</div>
       )}
