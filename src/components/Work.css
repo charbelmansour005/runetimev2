@@ -99,15 +99,8 @@
 .work-tile__overlay {
   position: absolute;
   inset: auto 0 0;
-  padding: 90px 22px 20px;
+  padding: 70px 22px 22px;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.62) 38%, rgba(0, 0, 0, 0.84) 100%);
-  transform: translateY(30px);
-  transition: transform 0.45s var(--ease-out-3);
-}
-
-.work-tile:hover .work-tile__overlay,
-.work-tile:focus-visible .work-tile__overlay {
-  transform: none;
 }
 
 .work-tile__overlay h3 {
@@ -150,10 +143,6 @@
 @media (max-width: 640px) {
   .work__grid {
     grid-template-columns: 1fr;
-  }
-
-  .work-tile__overlay {
-    transform: none;
   }
 
   .work-tile__more {

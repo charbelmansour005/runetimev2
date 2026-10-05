@@ -12,6 +12,24 @@ const FILTERS = [{ value: 'all', label: 'All' }, ...WORK_TAG_OPTIONS];
 // The home page shows the first few; /work lists them all.
 const HOME_COUNT = 4;
 
+// "All" on the home page shows a spread of the work, not just the first few
+// (which can all be one kind): take the projects in turn from each type (web,
+// mobile, AI), then list the chosen ones in their CMS order.
+function spread(items, count) {
+  const lists = WORK_TAG_OPTIONS.map(({ value }) => []);
+  items.forEach((item) => {
+    const type = WORK_TAG_OPTIONS.findIndex(({ value }) => item.tags.includes(value));
+    lists[Math.max(type, 0)].push(item);
+  });
+  const picked = new Set();
+  for (let round = 0; picked.size < count && lists.some((list) => list[round]); round += 1) {
+    lists.forEach((list) => {
+      if (list[round] && picked.size < count) picked.add(list[round]);
+    });
+  }
+  return items.filter((item) => picked.has(item));
+}
+
 const isExternal = (url) => /^https?:\/\//i.test(url);
 
 // What a project's link says. A link to another site is named after it
@@ -57,7 +75,7 @@ export default function Work() {
   // Every project switched off in the CMS: hide the section.
   if (!work.items.length) return null;
   const matching = work.items.filter((item) => filter === 'all' || item.tags.includes(filter));
-  const items = matching.slice(0, HOME_COUNT);
+  const items = filter === 'all' ? spread(matching, HOME_COUNT) : matching.slice(0, HOME_COUNT);
 
   return (
     <section className="section section--dark-alt work" id="work" aria-labelledby="work-title">
