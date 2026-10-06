@@ -31,3 +31,77 @@ export const NEEDS = { petals: 'trees' };
 export const encodeHidden = (hidden) => PARTS.filter((part) => hidden.has(part.id)).map((part) => part.code).join('');
 export const decodeHidden = (value) =>
   new Set(PARTS.filter((part) => typeof value === 'string' && value.includes(part.code)).map((part) => part.id));
+
+// What a single thing is called when it's selected, by its type.
+export const TYPE_LABELS = {
+  torii: 'Torii gate',
+  pagoda: 'Pagoda',
+  bridge: 'Bridge',
+  mountain: 'Mountain',
+  waterfall: 'Waterfall',
+  bamboo: 'Bamboo',
+  cherry: 'Cherry tree',
+  maple: 'Maple',
+  pine: 'Pine',
+  lantern: 'Stone lantern',
+  deer: 'Doe',
+  stag: 'Stag',
+  boat: 'Floating lantern',
+  rock: 'Rocks',
+  pond: 'Pond',
+};
+
+// What the playground can add more of.
+export const ADDABLE = [
+  { type: 'cherry', label: 'Cherry tree' },
+  { type: 'maple', label: 'Maple' },
+  { type: 'pine', label: 'Pine' },
+  { type: 'bamboo', label: 'Bamboo' },
+  { type: 'lantern', label: 'Stone lantern' },
+  { type: 'boat', label: 'Floating lantern' },
+  { type: 'deer', label: 'Doe' },
+  { type: 'stag', label: 'Stag' },
+  { type: 'rock', label: 'Rocks' },
+  { type: 'pond', label: 'Small pond' },
+  { type: 'bigpond', label: 'Big pond' },
+];
+const MAX_ADDED = 60;
+
+// A layout (what was moved, taken away and added, and the plate's size)
+// <-> the `g` value of a link. Anything that doesn't read as a layout is
+// dropped: links are typed and pasted by strangers.
+export const emptyLayout = () => ({ move: {}, gone: [], add: [], plate: 0 });
+export const isEmptyLayout = (layout) =>
+  !Object.keys(layout.move).length && !layout.gone.length && !layout.add.length && !layout.plate;
+export function encodeLayout(layout) {
+  if (isEmptyLayout(layout)) return '';
+  return btoa(JSON.stringify(layout)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+export function decodeLayout(value) {
+  const layout = emptyLayout();
+  if (typeof value !== 'string' || !value || value.length > 6000) return layout;
+  let data;
+  try {
+    data = JSON.parse(atob(value.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return layout;
+  }
+  const number = (v) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 50;
+  const id = (v) => typeof v === 'string' && /^[a-z]+#\d{1,3}$/.test(v);
+  if (data && typeof data === 'object') {
+    if (data.move && typeof data.move === 'object') {
+      for (const [key, at] of Object.entries(data.move).slice(0, 80)) {
+        if (id(key) && Array.isArray(at) && number(at[0]) && number(at[1])) layout.move[key] = [at[0], at[1]];
+      }
+    }
+    if (Array.isArray(data.gone)) layout.gone = data.gone.filter(id).slice(0, 80);
+    if (Array.isArray(data.add)) {
+      layout.add = data.add
+        .filter((item) => Array.isArray(item) && ADDABLE.some((a) => a.type === item[0]) && number(item[1]) && number(item[2]))
+        .slice(0, MAX_ADDED)
+        .map(([type, x, z]) => [type, x, z]);
+    }
+    if (number(data.plate)) layout.plate = Math.min(Math.max(data.plate, 0), 4);
+  }
+  return layout;
+}

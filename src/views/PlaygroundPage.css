@@ -297,6 +297,66 @@
   text-align: center;
 }
 
+.playground .hero-scene__canvas.is-moving {
+  cursor: move;
+}
+
+.playground__toast b {
+  font-weight: 700;
+}
+
+/* Things to add: a wrap of small buttons. */
+.playground__add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.playground__add button {
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--white);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.playground__add button::before {
+  content: '+ ';
+  color: var(--lilac);
+}
+
+.playground__add button:hover:not(:disabled) {
+  border-color: var(--violet-light);
+  background: rgba(139, 92, 255, 0.22);
+}
+
+.playground__add button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.playground__range {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.playground__range input {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--violet-light);
+}
+
 /* ---------- Phones: the panel is a sheet under the garden ---------- */
 
 @media (max-width: 860px) {

@@ -123,20 +123,43 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   const batch = new Batch({ split });
   const mirror = new Batch({ split }); // the same parts upside down, seen in the water
   const group = new THREE.Group();
-  // What's being built now: everything added belongs to this part.
+  // What's being built now. A part (see parts.js) is what a switch in the
+  // playground turns off; a unit is one thing of it that can be picked up and
+  // moved: one tree, one lantern, the whole torii. Everything added belongs to
+  // the unit that was begun last.
   let part = 'base';
-  const section = (id) => {
+  let unit = 'base';
+  const units = new Map();
+  const counts = {};
+  function begin(id, { x = 0, z = 0, movable = true, type = id, added = false, size = 0.5, kind } = {}) {
+    counts[id] = (counts[id] ?? 0) + 1;
     part = id;
+    unit = `${id}#${counts[id] - 1}`;
+    units.set(unit, { id: unit, part, type, kind, x, z, dx: 0, dz: 0, movable, added, size, hidden: false, live: null });
+    return unit;
+  }
+  const resume = (id) => {
+    unit = id;
+    part = units.get(id).part;
   };
-  // Things that move are added one by one, and remembered by part.
-  const owned = new Map();
+  // Things that move are added one by one. In the playground each unit's
+  // are kept in a group of its own, so the unit can be moved as one.
   const keep = (...objects) => {
-    group.add(...objects);
-    if (!owned.has(part)) owned.set(part, []);
-    owned.get(part).push(...objects);
-    for (const object of objects) object.userData.part = part;
+    if (!split) {
+      group.add(...objects);
+      return;
+    }
+    const owner = units.get(unit);
+    if (!owner.live) {
+      owner.live = new THREE.Group();
+      owner.live.userData = { part, unit };
+      group.add(owner.live);
+    }
+    owner.live.add(...objects);
   };
+  // Animations, by unit (so they stop when the unit is taken away).
   const movers = [];
+  const animate = (fn) => movers.push({ unit, fn });
   const glows = []; // static light halos: x, y, z, size, colour, strength
   const extra = []; // geometries, materials and textures to dispose of
 
@@ -157,7 +180,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   // Reflections are the scene's parts mirrored below the water, fading with
   // depth. (A real mirror would mean drawing the scene twice per frame.)
   const mirrorMaterial = new THREE.ShaderMaterial({
-    uniforms: { uWater: { value: WATER }, uDepth: { value: DEPTH - 0.05 } },
+    uniforms: { uWater: { value: WATER }, uDepth: { value: DEPTH - 0.05 }, uHalf: { value: new THREE.Vector2(4.94, 3.94) } },
     vertexShader: /* glsl */ `
       attribute vec3 color;
       varying vec3 vColor;
@@ -175,13 +198,14 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     fragmentShader: /* glsl */ `
       uniform float uWater;
       uniform float uDepth;
+      uniform vec2 uHalf;
       varying vec3 vColor;
       varying float vY;
       varying vec2 vPlan;
       void main() {
         if (vY > uWater) discard;
         // Nothing may show outside the base (a mirrored branch that overhangs it).
-        vec2 q = abs(vPlan) - (vec2(4.94, 3.94) - 0.86);
+        vec2 q = abs(vPlan) - (uHalf - 0.86);
         if (length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 0.86 > -0.05) discard;
         float depth = (uWater - vY) / uDepth;
         gl_FragColor = vec4(vColor, (1.0 - smoothstep(0.5, 1.0, depth)) * 0.9);
@@ -198,14 +222,14 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
 
   // Adds a part and, unless told otherwise, its reflection.
   function add(key, geometry, transform, tint, { reflect = true, shadow = true } = {}) {
-    batch.add(key, geometry, transform, tint, { shadow, part });
+    batch.add(key, geometry, transform, tint, { shadow, part: unit });
     if (reflect) {
       const c = color(tint ?? '#ffffff').multiplyScalar(REFLECTED[key] ?? 1);
-      mirror.add('mirror', geometry, FLIP.clone().multiply(transform), c, { part });
+      mirror.add('mirror', geometry, FLIP.clone().multiply(transform), c, { part: unit });
     }
   }
 
-  const shine = (x, y, z, size, tint, strength = 1) => glows.push([x, y, z, size, tint, strength, part]);
+  const shine = (x, y, z, size, tint, strength = 1) => glows.push([x, y, z, size, tint, strength, unit]);
   const glow = (x, y, z, size, tint, strength = 1) => {
     shine(x, y, z, size, tint, strength);
     // And its reflection, unless that would fall below the base.
@@ -242,41 +266,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
 
   // ---------- Ground ----------
   const pondHole = () => new THREE.Path().setFromPoints(outline2d);
-  const land = roundedShape(5, 4, 0.9);
-  land.holes.push(pondHole());
-  add('solid', flat(new THREE.ExtrudeGeometry(land, { depth: 0.16, bevelEnabled: false, curveSegments: 8 })), at(), C.moss, {
-    reflect: false,
-  });
-  const body = roundedShape(4.94, 3.94, 0.86);
-  body.holes.push(pondHole());
-  add(
-    'solid',
-    flat(new THREE.ExtrudeGeometry(body, { depth: DEPTH - 0.2, bevelEnabled: false, curveSegments: 8 })),
-    at(0, -0.2, 0),
-    C.strata,
-    { reflect: false },
-  );
-  // A lit seam between the land and its base.
-  const seam = roundedShape(4.97, 3.97, 0.88);
-  seam.holes.push(roundedShape(4.9, 3.9, 0.84));
-  add('accent', flat(new THREE.ExtrudeGeometry(seam, { depth: 0.045, bevelEnabled: false, curveSegments: 8 })), at(0, -0.158, 0), null, {
-    reflect: false,
-  });
-  // The pond's bed, far below, and a pebble shore around the water.
-  const bed = new THREE.Mesh(
-    flat(new THREE.ShapeGeometry(roundedShape(4.9, 3.9, 0.84))),
-    new THREE.MeshBasicMaterial({ color: C.deep, side: THREE.DoubleSide }),
-  );
-  bed.position.y = -DEPTH + 0.01;
-  group.add(bed);
-  extra.push(bed.geometry, bed.material);
-
   const centre = outline2d.reduce((sum, p) => sum.add(p), new THREE.Vector2()).divideScalar(outline2d.length);
-  const shore = new THREE.Shape(outline2d.map((p) => p.clone().sub(centre).multiplyScalar(1.07).add(centre)));
-  shore.holes.push(pondHole());
-  add('solid', flat(new THREE.ShapeGeometry(shore)).scale(1, -1, 1), at(0, 0.006, 0), C.shore, { reflect: false, shadow: false });
-
-  // Water: see-through, so the reflections and the koi show.
   const waterMaterial = new THREE.MeshStandardMaterial({
     color: '#2c6cc4',
     roughness: 0.18,
@@ -286,18 +276,149 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     side: THREE.DoubleSide,
     depthWrite: false,
   });
-  const water = new THREE.Mesh(flat(new THREE.ShapeGeometry(new THREE.Shape(outline2d))), waterMaterial);
-  water.position.y = WATER;
-  water.renderOrder = 2;
-  group.add(water);
-  extra.push(water.geometry, waterMaterial);
+  extra.push(waterMaterial);
+
+  // The playground's ground can grow, and have more ponds dug into it. The
+  // lake is a hole in the land's shape, as on the home page; extra ponds are
+  // cut out when the land is drawn (their shapes may overlap each other and
+  // the lake, which is how the lake is extended), and one sheet of water
+  // lies under all of it, showing wherever the land is open.
+  const MAX_PONDS = 12;
+  const plate = { x: 5, z: 4 };
+  const ponds = { value: Array.from({ length: MAX_PONDS }, () => new THREE.Vector3()) };
+  const pondCount = { value: 0 };
+  const carved = (material, shore = false) => {
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.uPonds = ponds;
+      shader.uniforms.uPondCount = pondCount;
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying vec3 vWorld;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace(
+          '#include <common>',
+          `#include <common>
+          uniform vec3 uPonds[${MAX_PONDS}];
+          uniform int uPondCount;
+          varying vec3 vWorld;
+          // How far outside the nearest pond's wavy edge (negative: inside).
+          float pondEdge() {
+            float d = 1000.0;
+            for (int i = 0; i < ${MAX_PONDS}; i++) {
+              if (i >= uPondCount) break;
+              vec2 q = vWorld.xz - uPonds[i].xy;
+              float a = atan(q.y, q.x);
+              float r = uPonds[i].z * (1.0 + 0.07 * sin(a * 3.0 + float(i) * 1.7) + 0.045 * sin(a * 5.0 + float(i)));
+              d = min(d, length(q) - r);
+            }
+            return d;
+          }`,
+        )
+        .replace('void main() {', 'void main() {\nfloat pondD = pondEdge();\nif (pondD < 0.0) discard;')
+        .replace(
+          '#include <color_fragment>',
+          shore
+            ? '#include <color_fragment>\nif (vWorld.y > -0.01) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.27, 0.24, 0.37), 1.0 - smoothstep(0.0, 0.13, pondD));'
+            : '#include <color_fragment>',
+        );
+    };
+    return material;
+  };
+  const ground = new THREE.Group();
+  const groundMaterials = split
+    ? {
+        land: carved(new THREE.MeshStandardMaterial({ color: C.moss, roughness: 0.85 }), true),
+        body: carved(new THREE.MeshStandardMaterial({ color: C.strata, roughness: 0.85 })),
+        shore: new THREE.MeshStandardMaterial({ color: C.shore, roughness: 0.85 }),
+        seam: new THREE.MeshBasicMaterial({ color: '#8b5cff', toneMapped: false }),
+        bed: new THREE.MeshBasicMaterial({ color: C.deep, side: THREE.DoubleSide }),
+      }
+    : {};
+  extra.push(...Object.values(groundMaterials));
+  function layGround() {
+    for (const mesh of ground.children) mesh.geometry.dispose();
+    ground.clear();
+    const { x: hx, z: hz } = plate;
+    const slab = (inset, radius, depth, holes) => {
+      const shape = roundedShape(hx - inset, hz - inset, radius);
+      shape.holes.push(...holes);
+      return depth
+        ? flat(new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 8 }))
+        : flat(new THREE.ShapeGeometry(shape));
+    };
+    const mesh = (geometry, material, y = 0, shadows = true) => {
+      const m = new THREE.Mesh(geometry, material);
+      m.position.y = y;
+      m.castShadow = shadows;
+      m.receiveShadow = shadows;
+      m.userData.part = 'base';
+      ground.add(m);
+      return m;
+    };
+    mesh(slab(0, 0.9, 0.16, [pondHole()]), groundMaterials.land);
+    mesh(slab(0.06, 0.86, DEPTH - 0.2, [pondHole()]), groundMaterials.body, -0.2);
+    mesh(slab(0.03, 0.88, 0.045, [roundedShape(hx - 0.1, hz - 0.1, 0.84)]), groundMaterials.seam, -0.158, false);
+    mesh(slab(0.1, 0.84, 0, []), groundMaterials.bed, -DEPTH + 0.01, false);
+    const rim = new THREE.Shape(outline2d.map((p) => p.clone().sub(centre).multiplyScalar(1.07).add(centre)));
+    rim.holes.push(pondHole());
+    const shore = mesh(flat(new THREE.ShapeGeometry(rim)).scale(1, -1, 1), groundMaterials.shore, 0.006);
+    shore.castShadow = false;
+    const water = mesh(slab(0.1, 0.84, 0, []), waterMaterial, WATER, false);
+    water.renderOrder = 2;
+    mirrorMaterial.uniforms.uHalf.value.set(hx - 0.06, hz - 0.06);
+  }
+
+  if (split) {
+    layGround();
+    group.add(ground);
+  } else {
+    const land = roundedShape(5, 4, 0.9);
+    land.holes.push(pondHole());
+    add('solid', flat(new THREE.ExtrudeGeometry(land, { depth: 0.16, bevelEnabled: false, curveSegments: 8 })), at(), C.moss, {
+      reflect: false,
+    });
+    const body = roundedShape(4.94, 3.94, 0.86);
+    body.holes.push(pondHole());
+    add(
+      'solid',
+      flat(new THREE.ExtrudeGeometry(body, { depth: DEPTH - 0.2, bevelEnabled: false, curveSegments: 8 })),
+      at(0, -0.2, 0),
+      C.strata,
+      { reflect: false },
+    );
+    // A lit seam between the land and its base.
+    const seam = roundedShape(4.97, 3.97, 0.88);
+    seam.holes.push(roundedShape(4.9, 3.9, 0.84));
+    add('accent', flat(new THREE.ExtrudeGeometry(seam, { depth: 0.045, bevelEnabled: false, curveSegments: 8 })), at(0, -0.158, 0), null, {
+      reflect: false,
+    });
+    // The pond's bed, far below, and a pebble shore around the water.
+    const bed = new THREE.Mesh(
+      flat(new THREE.ShapeGeometry(roundedShape(4.9, 3.9, 0.84))),
+      new THREE.MeshBasicMaterial({ color: C.deep, side: THREE.DoubleSide }),
+    );
+    bed.position.y = -DEPTH + 0.01;
+    group.add(bed);
+    extra.push(bed.geometry, bed.material);
+
+    const shore = new THREE.Shape(outline2d.map((p) => p.clone().sub(centre).multiplyScalar(1.07).add(centre)));
+    shore.holes.push(pondHole());
+    add('solid', flat(new THREE.ShapeGeometry(shore)).scale(1, -1, 1), at(0, 0.006, 0), C.shore, { reflect: false, shadow: false });
+
+    // Water: see-through, so the reflections and the koi show.
+    const water = new THREE.Mesh(flat(new THREE.ShapeGeometry(new THREE.Shape(outline2d))), waterMaterial);
+    water.position.y = WATER;
+    water.renderOrder = 2;
+    group.add(water);
+    extra.push(water.geometry);
+  }
 
   await pause();
 
   // ---------- The torii ----------
   // The great gate in the water: two pillars, each braced by a smaller post
   // in front and behind, under a curved, roofed lintel.
-  section('torii');
+  const toriiUnit = begin('torii', { x: TORII.x, z: TORII.z, size: 1.7 });
   {
     const T = at(TORII.x, 0, TORII.z, { ry: TORII.ry, s: TORII.s });
     const put = (key, geometry, local, tint, options) => add(key, geometry, T.clone().multiply(local), tint, options);
@@ -337,7 +458,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   await pause();
 
   // ---------- Pagoda (back right) ----------
-  section('pagoda');
+  begin('pagoda', { x: 2.95, z: -2.75, size: 1.0 });
   {
     const [px, pz] = [2.95, -2.75];
     add('solid', block(1.5, 0.1, 1.5, 0.03), at(px, 0, pz), C.stone);
@@ -379,7 +500,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
 
   // ---------- Bridge (back left) ----------
   // An arched footbridge over the pond's narrow arm.
-  section('bridge');
+  begin('bridge', { x: BRIDGE.x, z: BRIDGE.z, size: 1.1 });
   {
     const B = at(BRIDGE.x, 0, BRIDGE.z, { ry: BRIDGE.ry });
     const put = (key, geometry, local, tint) => add(key, geometry, B.clone().multiply(local), tint);
@@ -406,10 +527,10 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   await pause();
 
   // ---------- Trees ----------
-  section('trees');
   const crown = faceted(new THREE.IcosahedronGeometry(1, 1));
   const disc = faceted(new THREE.IcosahedronGeometry(1, 0));
-  async function blossom(x, z, size, palette) {
+  async function blossom(x, z, size, palette, options) {
+    begin('trees', { x, z, size: size * 0.7, type: palette === C.cherry ? 'cherry' : 'maple', ...options });
     const turn = x * 3 + z;
     add('solid', cylinder(size * 0.07, size * 0.12, size * 0.85, 6), at(x, 0, z, { rz: Math.sin(turn) * 0.12 }), C.trunk);
     const lobes = [
@@ -430,7 +551,8 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     });
     await pause();
   }
-  async function pine(x, z, size) {
+  async function pine(x, z, size, options) {
+    begin('trees', { x, z, size: size * 0.6, type: 'pine', ...options });
     add('solid', cylinder(size * 0.05, size * 0.09, size * 1.3, 6), at(x, 0, z, { rz: 0.1 }), C.trunk);
     [
       [0.1, 0.7, 0.5],
@@ -457,8 +579,8 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   await pine(-1.75, -3.3, 0.75);
 
   // ---------- Stone lanterns ----------
-  section('lanterns');
-  async function lantern(x, z, size = 1) {
+  async function lantern(x, z, size = 1, options) {
+    begin('lanterns', { x, z, size: 0.3, type: 'lantern', ...options });
     const s = size;
     add('solid', block(0.2 * s, 0.05 * s, 0.2 * s, 0.01), at(x, 0, z), C.stoneDark);
     add('solid', cylinder(0.035 * s, 0.045 * s, 0.26 * s, 8), at(x, 0.05 * s, z), C.stone);
@@ -491,7 +613,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   }
 
   // ---------- Rocks, bushes and lily pads ----------
-  section('rocks');
+  begin('rocks', { movable: false });
   const rock = faceted(new THREE.DodecahedronGeometry(1, 0));
   // Along the water's edge, half in the shallows.
   for (let i = 0; i < outline.length; i += 1) {
@@ -518,7 +640,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     await pause();
   }
 
-  section('lilies');
+  begin('lilies', { movable: false });
   const pad = new THREE.CircleGeometry(1, 9, 0.5, Math.PI * 2 - 0.9).rotateX(-Math.PI / 2);
   const petal = faceted(new THREE.OctahedronGeometry(1, 0));
   for (let placed = 0, tries = 0; placed < 22 && tries < 500; tries += 1) {
@@ -532,15 +654,47 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     await pause();
   }
 
+  // ---------- Bamboo (a maker, used by the mountain and the playground) ----------
+  // Thin jointed canes with a few leaves near the top. Placed by numbers of
+  // their own, like the living things further down, so nothing else moves.
+  const grove = seeded(41);
+  const some = (min, max) => min + grove() * (max - min);
+  const leaf = faceted(new THREE.OctahedronGeometry(1, 0));
+  function cane(x, z, i) {
+    const height = some(0.9, 1.5);
+    const lean = { rx: some(-0.07, 0.07), rz: some(-0.07, 0.07) };
+    const green = C.bamboo[i % C.bamboo.length];
+    add('solid', cylinder(0.022, 0.03, height, 6), at(x, 0, z, lean), green);
+    // The joints.
+    for (let y = 0.3; y < height - 0.1; y += 0.32) {
+      add('solid', cylinder(0.034, 0.034, 0.014, 6), at(x - lean.rz * y, y, z + lean.rx * y), C.bambooDark, { reflect: false });
+    }
+    for (let k = 0; k < 6; k += 1) {
+      const y = height * some(0.55, 1.0);
+      const turn = some(0, 6.28);
+      const length = some(0.13, 0.2);
+      add(
+        'solid',
+        leaf,
+        at(x - lean.rz * y + Math.cos(turn) * length * 0.8, y, z + lean.rx * y - Math.sin(turn) * length * 0.8, {
+          sx: length,
+          sy: 0.012,
+          sz: 0.035,
+          ry: turn,
+          rz: some(-0.7, -0.2),
+        }),
+        C.leaf[k % C.leaf.length],
+        { reflect: false },
+      );
+    }
+  }
+
   // ---------- Mountain, waterfall and bamboo ----------
   // The left corner is a mountain, with a spring that steps down a cliff at
-  // its foot into the pond and bamboo at either end. Placed by its own numbers, like the living things
-  // further down, so nothing else in the garden moves.
+  // its foot into the pond and bamboo at either end.
   {
-    const grove = seeded(41);
-    const some = (min, max) => min + grove() * (max - min);
     const FALL = { x: -3.9, z: 1.4, step: 0.55, top: 1.2 };
-    section('waterfall');
+    const fallUnit = begin('waterfall', { x: FALL.x + 0.1, z: FALL.z, size: 0.9 });
     // A small cliff of stacked slabs in two tiers, its front standing in the
     // shallows: the water drops from the top onto the lower tier, crosses it
     // and drops again into the pond. Rock walls hug the water all the way
@@ -577,11 +731,15 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     }
     await pause();
 
+    const canes = [
+      [-0.12, -1.72], [-0.3, -1.85], [-0.48, -1.7], [-0.22, -2.02], [-0.42, -1.98], [-0.05, -1.92],
+      [0.72, 1.98], [0.88, 2.12], [0.78, 2.26], [0.98, 1.95], [1.04, 2.2], [0.9, 2.32],
+    ];
     // The mountain: it fills the whole corner and stands twice as tall as
     // the torii. Blunt, flat-topped masses with roughened sides, the tallest
     // behind the falls; the spring's channel starts inside it, and a shoulder
     // on either side puts the falls in a gorge.
-    section('mountain');
+    begin('mountain', { x: FALL.x - 0.45, z: FALL.z + 0.4, size: 1.6 });
     const mass = (sides) => {
       const geometry = new THREE.CylinderGeometry(0.42, 1, 1, sides, 5).translate(0, 0.5, 0);
       const spot = geometry.attributes.position;
@@ -642,45 +800,21 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
 
     // Bamboo: thin jointed canes with a few leaves near the top, in two
     // stands at the mountain's two ends.
-    section('bamboo');
-    const leaf = faceted(new THREE.OctahedronGeometry(1, 0));
-    const canes = [
-      [-0.12, -1.72], [-0.3, -1.85], [-0.48, -1.7], [-0.22, -2.02], [-0.42, -1.98], [-0.05, -1.92],
-      [0.72, 1.98], [0.88, 2.12], [0.78, 2.26], [0.98, 1.95], [1.04, 2.2], [0.9, 2.32],
-    ];
     for (const [i, [dx, dz]] of canes.entries()) {
-      const x = FALL.x + dx;
-      const z = FALL.z + dz;
-      const height = some(0.9, 1.5);
-      const lean = { rx: some(-0.07, 0.07), rz: some(-0.07, 0.07) };
-      const green = C.bamboo[i % C.bamboo.length];
-      add('solid', cylinder(0.022, 0.03, height, 6), at(x, 0, z, lean), green);
-      // The joints.
-      for (let y = 0.3; y < height - 0.1; y += 0.32) {
-        add('solid', cylinder(0.034, 0.034, 0.014, 6), at(x - lean.rz * y, y, z + lean.rx * y), C.bambooDark, { reflect: false });
+      // Two stands, six canes each.
+      if (i % 6 === 0) {
+        const stand = canes.slice(i, i + 6);
+        begin('bamboo', {
+          x: FALL.x + stand.reduce((sum, c) => sum + c[0], 0) / 6,
+          z: FALL.z + stand.reduce((sum, c) => sum + c[1], 0) / 6,
+          size: 0.45,
+        });
       }
-      for (let k = 0; k < 6; k += 1) {
-        const y = height * some(0.55, 1.0);
-        const turn = some(0, 6.28);
-        const length = some(0.13, 0.2);
-        add(
-          'solid',
-          leaf,
-          at(x - lean.rz * y + Math.cos(turn) * length * 0.8, y, z + lean.rx * y - Math.sin(turn) * length * 0.8, {
-            sx: length,
-            sy: 0.012,
-            sz: 0.035,
-            ry: turn,
-            rz: some(-0.7, -0.2),
-          }),
-          C.leaf[k % C.leaf.length],
-          { reflect: false },
-        );
-      }
+      cane(FALL.x + dx, FALL.z + dz, i);
       await pause();
     }
 
-    section('waterfall');
+    resume(fallUnit);
     // Moss on the ledges and tops, with a few fronds hanging from it.
     for (const [i, [dx, y, dz, size]] of [
       [-0.44, 1.2, 0.14, 0.13], [-0.42, 1.2, -0.12, 0.11], [-0.24, 1.3, 0.31, 0.12], [-0.26, 1.33, -0.32, 0.13],
@@ -802,7 +936,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       }
     };
     flow(0);
-    movers.push(flow);
+    animate(flow);
     glow(foot[0], 0.3, foot[2], 1.1, '#bcd8ff', 0.3);
   }
   await pause();
@@ -811,115 +945,114 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   // The shrine's deer, on the front shore: a stag keeping watch and two does,
   // one of them grazing. Bodies are part of the still garden; only the necks
   // and heads move.
-  section('deer');
-  {
-    const coat = { fur: '#c08348', dark: '#7b4b2a', pale: '#f3e6d2', antler: '#e6d8bb', nose: '#2a1d1c' };
-    const live = Object.fromEntries(
-      Object.entries(coat).map(([key, value]) => [key, new THREE.MeshStandardMaterial({ color: value, roughness: 0.85, flatShading: true })]),
-    );
-    const shapes = {
-      neck: block(0.062, 0.21, 0.062, 0.012),
-      head: block(0.125, 0.062, 0.066, 0.014),
-      snout: block(0.03, 0.036, 0.04, 0.008),
-      ear: faceted(new THREE.OctahedronGeometry(1, 0)),
-      tine: cylinder(0.004, 0.008, 1, 5),
-    };
-    extra.push(...Object.values(live), ...Object.values(shapes));
-    const part = (geometry, material, x, y, z, turn = {}) => {
-      const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(x, y, z);
-      mesh.rotation.set(turn.rx ?? 0, turn.ry ?? 0, turn.rz ?? 0);
-      if (turn.scale) mesh.scale.set(...turn.scale);
-      return mesh;
-    };
-    const herd = [
-      { x: 3.05, z: 3.0, ry: 2.5, size: 1.25, stag: true, phase: 0 },
-      { x: 2.4, z: 3.35, ry: 3.6, size: 1.05, grazes: true, phase: 0.2 },
-      { x: 1.7, z: 3.45, ry: 2.2, size: 1.0, grazes: true, phase: 0.63 },
-    ];
-    for (const deer of herd) {
-      const M = at(deer.x, 0, deer.z, { ry: deer.ry, s: deer.size });
-      const put = (geometry, local, tint) => add('solid', geometry, M.clone().multiply(local), tint, { reflect: false });
-      // Facing +x: body, rump, tail, four legs and a few spots along the back.
-      put(block(0.34, 0.135, 0.12, 0.03), at(0, 0.215, 0), coat.fur);
-      put(block(0.2, 0.05, 0.1, 0.02), at(0.02, 0.2, 0), coat.pale);
-      put(block(0.03, 0.09, 0.1, 0.012), at(-0.165, 0.24, 0), coat.pale);
-      put(block(0.035, 0.05, 0.035, 0.01), at(-0.185, 0.3, 0, { rz: 0.5 }), coat.pale);
-      for (const [lx, lz, lean] of [
-        [0.125, 0.04, 0.05],
-        [0.125, -0.04, -0.06],
-        [-0.125, 0.04, -0.08],
-        [-0.125, -0.04, 0.06],
-      ]) {
-        put(cylinder(0.02, 0.011, 0.24, 5), at(lx, 0, lz, { rz: lean }), coat.dark);
-      }
-      if (!deer.stag) {
-        for (const [sx, sz] of [
-          [0.08, 0.03],
-          [-0.02, -0.03],
-          [-0.1, 0.025],
-          [0.02, 0.035],
-          [-0.07, -0.02],
-        ]) {
-          put(block(0.022, 0.008, 0.022, 0.003), at(sx, 0.346, sz), coat.pale);
-        }
-      }
-      // The neck swings from the shoulders, and the head tips on its end.
-      const body = new THREE.Group();
-      body.position.set(deer.x, 0, deer.z);
-      body.rotation.y = deer.ry;
-      body.scale.setScalar(deer.size);
-      const neck = new THREE.Group();
-      neck.position.set(0.14, 0.3, 0);
-      const head = new THREE.Group();
-      head.position.set(0, 0.2, 0);
-      head.add(
-        part(shapes.head, live.fur, 0.035, -0.02, 0),
-        part(shapes.snout, live.nose, 0.1, -0.012, 0),
-        part(shapes.ear, live.dark, -0.02, 0.055, 0.04, { rx: 0.5, scale: [0.014, 0.035, 0.02] }),
-        part(shapes.ear, live.dark, -0.02, 0.055, -0.04, { rx: -0.5, scale: [0.014, 0.035, 0.02] }),
-      );
-      if (deer.stag) {
-        for (const side of [-1, 1]) {
-          head.add(
-            part(shapes.tine, live.antler, 0, 0.04, side * 0.022, { rx: side * 0.45, rz: 0.25, scale: [1, 0.17, 1] }),
-            part(shapes.tine, live.antler, -0.03, 0.14, side * 0.085, { rx: side * 0.1, rz: -0.5, scale: [1, 0.1, 1] }),
-            part(shapes.tine, live.antler, -0.022, 0.1, side * 0.062, { rx: side * 0.9, rz: -0.9, scale: [1, 0.07, 1] }),
-          );
-        }
-      }
-      neck.add(part(shapes.neck, live.fur, 0, 0, 0), head);
-      body.add(neck);
-      body.traverse((child) => {
-        child.castShadow = child.isMesh === true;
-      });
-      keep(body);
-      const smooth = (a, b, v) => {
-        const k = Math.min(1, Math.max(0, (v - a) / (b - a)));
-        return k * k * (3 - 2 * k);
-      };
-      const move = (t) => {
-        if (deer.grazes) {
-          // Head down to the grass, lifted now and then to look about.
-          const u = (t * 0.085 + deer.phase) % 1;
-          const up = smooth(0, 0.07, u) * (1 - smooth(0.26, 0.34, u));
-          neck.rotation.z = -2.3 + up * 1.75 + Math.sin(t * 5.5) * 0.035 * (1 - up);
-          head.rotation.z = 0.95 - up * 0.55;
-          neck.rotation.y = Math.sin(t * 0.5 + deer.phase * 9) * 0.35 * up;
-        } else {
-          neck.rotation.z = -0.42 + Math.sin(t * 0.4) * 0.04;
-          neck.rotation.y = Math.sin(t * 0.21) * 0.55;
-          head.rotation.z = 0.4;
-        }
-      };
-      move(0);
-      movers.push(move);
-      await pause();
+  const coat = { fur: '#c08348', dark: '#7b4b2a', pale: '#f3e6d2', antler: '#e6d8bb', nose: '#2a1d1c' };
+  const furs = Object.fromEntries(
+    Object.entries(coat).map(([key, value]) => [key, new THREE.MeshStandardMaterial({ color: value, roughness: 0.85, flatShading: true })]),
+  );
+  const shapes = {
+    neck: block(0.062, 0.21, 0.062, 0.012),
+    head: block(0.125, 0.062, 0.066, 0.014),
+    snout: block(0.03, 0.036, 0.04, 0.008),
+    ear: faceted(new THREE.OctahedronGeometry(1, 0)),
+    tine: cylinder(0.004, 0.008, 1, 5),
+  };
+  extra.push(...Object.values(furs), ...Object.values(shapes));
+  const limb = (geometry, material, x, y, z, turn = {}) => {
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, y, z);
+    mesh.rotation.set(turn.rx ?? 0, turn.ry ?? 0, turn.rz ?? 0);
+    if (turn.scale) mesh.scale.set(...turn.scale);
+    return mesh;
+  };
+  async function deerAt(deer, options) {
+    begin('deer', { x: deer.x, z: deer.z, size: 0.32, type: deer.stag ? 'stag' : 'deer', ...options });
+    const M = at(deer.x, 0, deer.z, { ry: deer.ry, s: deer.size });
+    const put = (geometry, local, tint) => add('solid', geometry, M.clone().multiply(local), tint, { reflect: false });
+    // Facing +x: body, rump, tail, four legs and a few spots along the back.
+    put(block(0.34, 0.135, 0.12, 0.03), at(0, 0.215, 0), coat.fur);
+    put(block(0.2, 0.05, 0.1, 0.02), at(0.02, 0.2, 0), coat.pale);
+    put(block(0.03, 0.09, 0.1, 0.012), at(-0.165, 0.24, 0), coat.pale);
+    put(block(0.035, 0.05, 0.035, 0.01), at(-0.185, 0.3, 0, { rz: 0.5 }), coat.pale);
+    for (const [lx, lz, lean] of [
+      [0.125, 0.04, 0.05],
+      [0.125, -0.04, -0.06],
+      [-0.125, 0.04, -0.08],
+      [-0.125, -0.04, 0.06],
+    ]) {
+      put(cylinder(0.02, 0.011, 0.24, 5), at(lx, 0, lz, { rz: lean }), coat.dark);
     }
+    if (!deer.stag) {
+      for (const [sx, sz] of [
+        [0.08, 0.03],
+        [-0.02, -0.03],
+        [-0.1, 0.025],
+        [0.02, 0.035],
+        [-0.07, -0.02],
+      ]) {
+        put(block(0.022, 0.008, 0.022, 0.003), at(sx, 0.346, sz), coat.pale);
+      }
+    }
+    // The neck swings from the shoulders, and the head tips on its end.
+    const body = new THREE.Group();
+    body.position.set(deer.x, 0, deer.z);
+    body.rotation.y = deer.ry;
+    body.scale.setScalar(deer.size);
+    const neck = new THREE.Group();
+    neck.position.set(0.14, 0.3, 0);
+    const head = new THREE.Group();
+    head.position.set(0, 0.2, 0);
+    head.add(
+      limb(shapes.head, furs.fur, 0.035, -0.02, 0),
+      limb(shapes.snout, furs.nose, 0.1, -0.012, 0),
+      limb(shapes.ear, furs.dark, -0.02, 0.055, 0.04, { rx: 0.5, scale: [0.014, 0.035, 0.02] }),
+      limb(shapes.ear, furs.dark, -0.02, 0.055, -0.04, { rx: -0.5, scale: [0.014, 0.035, 0.02] }),
+    );
+    if (deer.stag) {
+      for (const side of [-1, 1]) {
+        head.add(
+          limb(shapes.tine, furs.antler, 0, 0.04, side * 0.022, { rx: side * 0.45, rz: 0.25, scale: [1, 0.17, 1] }),
+          limb(shapes.tine, furs.antler, -0.03, 0.14, side * 0.085, { rx: side * 0.1, rz: -0.5, scale: [1, 0.1, 1] }),
+          limb(shapes.tine, furs.antler, -0.022, 0.1, side * 0.062, { rx: side * 0.9, rz: -0.9, scale: [1, 0.07, 1] }),
+        );
+      }
+    }
+    neck.add(limb(shapes.neck, furs.fur, 0, 0, 0), head);
+    body.add(neck);
+    body.traverse((child) => {
+      child.castShadow = child.isMesh === true;
+    });
+    keep(body);
+    const smooth = (a, b, v) => {
+      const k = Math.min(1, Math.max(0, (v - a) / (b - a)));
+      return k * k * (3 - 2 * k);
+    };
+    const move = (t) => {
+      if (deer.grazes) {
+        // Head down to the grass, lifted now and then to look about.
+        const u = (t * 0.085 + deer.phase) % 1;
+        const up = smooth(0, 0.07, u) * (1 - smooth(0.26, 0.34, u));
+        neck.rotation.z = -2.3 + up * 1.75 + Math.sin(t * 5.5) * 0.035 * (1 - up);
+        head.rotation.z = 0.95 - up * 0.55;
+        neck.rotation.y = Math.sin(t * 0.5 + deer.phase * 9) * 0.35 * up;
+      } else {
+        neck.rotation.z = -0.42 + Math.sin(t * 0.4) * 0.04;
+        neck.rotation.y = Math.sin(t * 0.21) * 0.55;
+        head.rotation.z = 0.4;
+      }
+    };
+    move(0);
+    animate(move);
+    await pause();
   }
+  const herd = [
+    { x: 3.05, z: 3.0, ry: 2.5, size: 1.25, stag: true, phase: 0 },
+    { x: 2.4, z: 3.35, ry: 3.6, size: 1.05, grazes: true, phase: 0.2 },
+    { x: 1.7, z: 3.45, ry: 2.2, size: 1.0, grazes: true, phase: 0.63 },
+  ];
+  for (const deer of herd) await deerAt(deer);
 
   // ---------- Koi ----------
-  section('koi');
+  begin('koi', { movable: false });
   {
     const bodyGeometry = new THREE.SphereGeometry(1, 10, 6).scale(0.13, 0.035, 0.045);
     const tailGeometry = new THREE.ConeGeometry(0.045, 0.1, 4).rotateZ(Math.PI / 2).scale(1, 0.5, 1).translate(-0.05, 0, 0);
@@ -940,7 +1073,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       const rz = between(0.5, 1.15);
       const speed = between(0.16, 0.3) * (i % 2 ? 1 : -1);
       const phase = rand() * 6.28;
-      movers.push((t) => {
+      animate((t) => {
         const a = phase + t * speed;
         fish.position.x = cx + Math.cos(a) * rx;
         fish.position.z = cz + Math.sin(a) * rz;
@@ -953,45 +1086,44 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   }
 
   // ---------- Lanterns afloat ----------
-  section('boats');
-  {
-    const paper = block(0.085, 0.085, 0.085, 0.012);
-    const tray = block(0.12, 0.014, 0.12, 0.004);
-    extra.push(paper, tray);
-    const paperMaterial = new THREE.MeshBasicMaterial({ color: C.paper, toneMapped: false });
-    const trayMaterial = new THREE.MeshStandardMaterial({ color: C.wood, roughness: 0.8 });
-    extra.push(paperMaterial, trayMaterial);
-    const spots = [
-      [1.9, 1.5],
-      [-0.9, 2.1],
-      [-2.4, 0.6],
-      [2.6, 0.1],
-      [0.6, 2.4],
-      [-1.2, -0.9],
-    ];
-    for (const [i, [x, z]] of spots.entries()) {
-      const boat = new THREE.Group();
-      const light = new THREE.Mesh(paper, paperMaterial);
-      light.position.y = 0.014;
-      const shine = glowSprite(C.warm, 0.55, 0.55);
-      shine.position.y = 0.06;
-      const below = glowSprite(C.warm, 0.5, 0.28);
-      below.position.y = -0.1;
-      boat.add(new THREE.Mesh(tray, trayMaterial), light, shine, below);
-      keep(boat);
-      extra.push(shine.material, below.material);
-      const phase = i * 1.7;
-      movers.push((t) => {
-        boat.position.set(x + Math.sin(t * 0.11 + phase) * 0.22, WATER + Math.sin(t * 1.3 + phase) * 0.006, z + Math.cos(t * 0.09 + phase) * 0.18);
-        boat.rotation.y = t * 0.05 + phase;
-      });
-      await pause();
-    }
+  const paper = block(0.085, 0.085, 0.085, 0.012);
+  const tray = block(0.12, 0.014, 0.12, 0.004);
+  const paperMaterial = new THREE.MeshBasicMaterial({ color: C.paper, toneMapped: false });
+  const trayMaterial = new THREE.MeshStandardMaterial({ color: C.wood, roughness: 0.8 });
+  extra.push(paper, tray, paperMaterial, trayMaterial);
+  async function boatAt(x, z, phase, options) {
+    begin('boats', { x, z, size: 0.22, type: 'boat', ...options });
+    const boat = new THREE.Group();
+    const light = new THREE.Mesh(paper, paperMaterial);
+    light.position.y = 0.014;
+    const shine = glowSprite(C.warm, 0.55, 0.55);
+    shine.position.y = 0.06;
+    const below = glowSprite(C.warm, 0.5, 0.28);
+    below.position.y = -0.1;
+    boat.add(new THREE.Mesh(tray, trayMaterial), light, shine, below);
+    keep(boat);
+    extra.push(shine.material, below.material);
+    const drift = (t) => {
+      boat.position.set(x + Math.sin(t * 0.11 + phase) * 0.22, WATER + Math.sin(t * 1.3 + phase) * 0.006, z + Math.cos(t * 0.09 + phase) * 0.18);
+      boat.rotation.y = t * 0.05 + phase;
+    };
+    drift(0);
+    animate(drift);
+    await pause();
+  }
+  for (const [i, [x, z]] of [
+    [1.9, 1.5],
+    [-0.9, 2.1],
+    [-2.4, 0.6],
+    [2.6, 0.1],
+    [0.6, 2.4],
+    [-1.2, -0.9],
+  ].entries()) {
+    await boatAt(x, z, i * 1.7);
   }
 
   // ---------- Ripples ----------
   // Rings spreading from the pillars and here and there on the pond.
-  section('ripples');
   {
     const ring = new THREE.RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2);
     extra.push(ring);
@@ -1007,7 +1139,8 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     ];
     for (const [i, [x, z, reach, offset]] of sources.entries()) {
       // The rings round the gate's feet go with the gate.
-      section(i < 4 ? 'torii' : 'ripples');
+      if (i < 4) resume(toriiUnit);
+      else if (i === 4) begin('ripples', { movable: false });
       const material = new THREE.MeshBasicMaterial({
         color: '#bcd8ff',
         transparent: true,
@@ -1020,7 +1153,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       mesh.position.set(x, WATER + 0.004, z);
       mesh.renderOrder = 3;
       keep(mesh);
-      movers.push((t) => {
+      animate((t) => {
         const f = ((t + offset) % 4.8) / 4.8;
         mesh.scale.setScalar(0.14 + f * reach);
         material.opacity = 0.34 * (1 - f) ** 1.5;
@@ -1030,7 +1163,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   }
 
   // ---------- Falling petals ----------
-  section('petals');
+  begin('petals', { movable: false });
   {
     const count = 54;
     const geometry = new THREE.PlaneGeometry(0.045, 0.03);
@@ -1071,25 +1204,32 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       petals.instanceMatrix.needsUpdate = true;
     };
     place(0);
-    movers.push(place);
+    animate(place);
   }
   await pause();
 
   // ---------- Halos, reflections and the merged static parts ----------
-  // Soft halos around lights, in one draw: sized in world units.
+  // Soft halos around lights, in one draw: sized in world units. (Written
+  // again whenever the playground moves, hides or adds something.)
   const haloGeometry = new THREE.BufferGeometry();
-  haloGeometry.setAttribute('position', new THREE.Float32BufferAttribute(glows.flatMap(([x, y, z]) => [x, y, z]), 3));
-  haloGeometry.setAttribute('size', new THREE.Float32BufferAttribute(glows.map((g) => g[3]), 1));
-  haloGeometry.setAttribute(
-    'tint',
-    new THREE.Float32BufferAttribute(
-      glows.flatMap(([, , , , tint, strength]) => {
-        const c = color(tint);
-        return [c.r, c.g, c.b, strength];
-      }),
-      4,
-    ),
-  );
+  const isShown = (owner) => !owner || (!owner.hidden && shown.get(owner.part) !== false && shown.get(NEEDS[owner.part]) !== false);
+  const shown = new Map();
+  function syncHalos() {
+    const positions = [];
+    const sizes = [];
+    const tints = [];
+    for (const [x, y, z, size, tint, strength, owner] of glows) {
+      const from = units.get(owner);
+      positions.push(x + (from?.dx ?? 0), y, z + (from?.dz ?? 0));
+      sizes.push(size);
+      const c = color(tint);
+      tints.push(c.r, c.g, c.b, isShown(from) ? strength : 0);
+    }
+    haloGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    haloGeometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+    haloGeometry.setAttribute('tint', new THREE.Float32BufferAttribute(tints, 4));
+  }
+  syncHalos();
   const haloMaterial = new THREE.ShaderMaterial({
     uniforms: { uMap: { value: halo() }, uScale: { value: 500 } },
     vertexShader: /* glsl */ `
@@ -1130,7 +1270,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   // ---------- Fireflies ----------
   // Small lights wandering over the pond and the shore, each blinking in its
   // own time. One draw, with the halos' material.
-  section('fireflies');
+  begin('fireflies', { movable: false });
   {
     const count = 36;
     const flies = Array.from({ length: count }, () => {
@@ -1175,13 +1315,13 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       tints.needsUpdate = true;
     };
     place(0);
-    movers.push(place);
+    animate(place);
   }
   await pause();
 
   // ---------- Mist ----------
   // Low, wide wisps drifting across the water.
-  section('mist');
+  begin('mist', { movable: false });
   {
     const wisps = [
       [-1.6, 0.9, 2.6, 0.0],
@@ -1216,7 +1356,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
         wisp.material.opacity = 1.15 + Math.sin(t * 0.13 + phase * 2) * 0.35;
       };
       move(0);
-      movers.push(move);
+      animate(move);
     }
   }
   await pause();
@@ -1224,7 +1364,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   // ---------- Birds ----------
   // A small flock circling high over the garden in a loose V. Each bird is
   // two triangles (its wings), all of them in one mesh moved every frame.
-  section('birds');
+  begin('birds', { movable: false });
   {
     const flock = [
       [0, 0, 0],
@@ -1274,63 +1414,240 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       positions.needsUpdate = true;
     };
     place(0);
-    movers.push(place);
+    animate(place);
   }
   await pause();
 
-  const reflections = await mirror.build({ mirror: mirrorMaterial }, { castShadow: false, receiveShadow: false, pause });
-  reflections.children.forEach((mesh) => {
-    mesh.renderOrder = 1;
-  });
-  group.add(reflections);
-
-  const statics = await batch.build(materials, { pause });
-  group.add(statics);
-
-  // ---------- Switching parts on and off (the playground) ----------
-  const shown = new Map();
-  const isShown = (id) => shown.get(id) !== false && shown.get(NEEDS[id]) !== false;
-  const haloTints = haloGeometry.getAttribute('tint');
-  const apply = (id) => {
-    const visible = isShown(id);
-    for (const set of [statics, reflections]) {
-      for (const mesh of set.children) if (mesh.userData.part === id) mesh.visible = visible;
+  // The still parts, merged: one mesh per material (and per unit, in the
+  // playground), and the same again for their reflections.
+  const reflections = new THREE.Group();
+  const statics = new THREE.Group();
+  group.add(reflections, statics);
+  async function merge() {
+    const made = [];
+    for (const mesh of (await mirror.build({ mirror: mirrorMaterial }, { castShadow: false, receiveShadow: false, pause })).children.slice()) {
+      mesh.renderOrder = 1;
+      reflections.add(mesh);
+      made.push(mesh);
     }
-    for (const object of owned.get(id) ?? []) object.visible = visible;
-    glows.forEach((entry, i) => {
-      if (entry[6] === id) haloTints.setW(i, visible ? entry[5] : 0);
-    });
-    haloTints.needsUpdate = true;
+    for (const mesh of (await batch.build(materials, { pause })).children.slice()) {
+      statics.add(mesh);
+      made.push(mesh);
+    }
+    // (The batch names each mesh after the unit it was built for.)
+    for (const mesh of made) {
+      const owner = units.get(mesh.userData.part);
+      if (owner) mesh.userData = { unit: owner.id, part: owner.part };
+    }
+    return made;
+  }
+  await merge();
+
+  // ---------- The playground: hiding, moving, adding and digging ----------
+  const meshesOf = (id) => [...statics.children, ...reflections.children].filter((mesh) => mesh.userData.unit === id);
+  function place(owner) {
+    const visible = isShown(owner);
+    for (const mesh of meshesOf(owner.id)) {
+      mesh.visible = visible;
+      mesh.position.set(owner.dx, 0, owner.dz);
+      mesh.updateMatrix();
+    }
+    if (owner.live) {
+      owner.live.visible = visible;
+      owner.live.position.set(owner.dx, 0, owner.dz);
+    }
+  }
+  const refresh = () => {
+    for (const owner of units.values()) if (owner.type !== 'pond') place(owner);
+    syncHalos();
+  };
+  const syncPonds = () => {
+    const list = [...units.values()].filter((owner) => owner.type === 'pond' && !owner.hidden);
+    list.slice(0, MAX_PONDS).forEach((owner, i) => ponds.value[i].set(owner.x + owner.dx, owner.z + owner.dz, owner.size));
+    pondCount.value = Math.min(list.length, MAX_PONDS);
+  };
+  // What the playground can add: a maker for each, called with where to put it.
+  const spin = seeded(99);
+  const makers = {
+    cherry: (x, z, o) => blossom(x, z, 0.8, C.cherry, o),
+    maple: (x, z, o) => blossom(x, z, 0.68, C.maple, o),
+    pine: (x, z, o) => pine(x, z, 0.85, o),
+    lantern: (x, z, o) => lantern(x, z, 1.05, o),
+    deer: (x, z, o) => deerAt({ x, z, ry: spin() * 6.28, size: 1.05, grazes: true, phase: spin() }, o),
+    stag: (x, z, o) => deerAt({ x, z, ry: spin() * 6.28, size: 1.25, stag: true, phase: 0 }, o),
+    boat: (x, z, o) => boatAt(x, z, spin() * 6, o),
+    bamboo: (x, z, o) => {
+      begin('bamboo', { x, z, size: 0.45, ...o });
+      for (let i = 0; i < 6; i += 1) cane(x + Math.cos(i * 1.05) * (i ? 0.2 : 0), z + Math.sin(i * 1.05) * (i ? 0.2 : 0), i);
+    },
+    rock: (x, z, o) => {
+      begin('rocks', { x, z, size: 0.4, type: 'rock', ...o });
+      const k = Math.floor(spin() * 3);
+      add('solid', rock, at(x, -0.06, z, { sx: 0.34, sy: 0.3, sz: 0.3, ry: spin() * 6 }), C.rock[k]);
+      add('solid', rock, at(x + 0.3, -0.05, z + 0.16, { sx: 0.17, sy: 0.14, sz: 0.19, ry: spin() * 6 }), C.rock[(k + 1) % 3]);
+    },
+    pond: (x, z, o) => {
+      begin('ponds', { x, z, size: 0.9, type: 'pond', ...o });
+    },
+    bigpond: (x, z, o) => {
+      begin('ponds', { x, z, size: 1.5, type: 'pond', kind: 'bigpond', ...o });
+    },
+  };
+  // A ring on the ground under whatever is selected.
+  const marker = new THREE.Mesh(
+    new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: '#b9a5f5', transparent: true, opacity: 0.9, depthTest: false, toneMapped: false }),
+  );
+  marker.renderOrder = 10;
+  marker.visible = false;
+  group.add(marker);
+  extra.push(marker.geometry, marker.material);
+  let selected = null;
+  const mark = () => {
+    const owner = units.get(selected);
+    marker.visible = Boolean(owner) && isShown(owner);
+    if (!owner) return;
+    marker.position.set(owner.x + owner.dx, 0.03, owner.z + owner.dz);
+    marker.scale.setScalar(owner.size + 0.22);
   };
   const raycaster = new THREE.Raycaster();
+  const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
   return {
     group,
-    // Shows or hides a part, and whatever depends on it.
+    // The plate's half-width and half-depth.
+    plate,
+    // Shows or hides a whole part (see parts.js), and whatever depends on it.
     setVisible(id, on) {
       shown.set(id, on);
-      apply(id);
-      for (const [other, needed] of Object.entries(NEEDS)) if (needed === id) apply(other);
+      refresh();
+      mark();
     },
-    // The part drawn at a point of the view (x and y from -1 to 1), if it's
-    // one that can be switched off. Only solid things count: not lights,
-    // mist or rings on the water.
+    unit: (id) => units.get(id),
+    // What can be said about the garden's layout: what was moved, taken
+    // away, added and dug, and the plate's size.
+    layout() {
+      const all = [...units.values()];
+      const round = (v) => Math.round(v * 100) / 100;
+      return {
+        move: Object.fromEntries(all.filter((u) => !u.added && (u.dx || u.dz)).map((u) => [u.id, [round(u.dx), round(u.dz)]])),
+        gone: all.filter((u) => !u.added && u.hidden).map((u) => u.id),
+        add: all.filter((u) => u.added && !u.hidden).map((u) => [u.kind ?? u.type, round(u.x + u.dx), round(u.z + u.dz)]),
+        plate: round(plate.x - 5),
+      };
+    },
+    // Grows the plate by `extra` units each way (the land is laid again).
+    setPlate(extraSize) {
+      const grow = Math.min(Math.max(Number(extraSize) || 0, 0), 4);
+      plate.x = 5 + grow;
+      plate.z = 4 + grow * 0.8;
+      layGround();
+      // Anything left outside a smaller plate comes back in.
+      for (const owner of units.values()) {
+        if (owner.movable && (owner.dx || owner.dz || owner.added)) this.moveTo(owner.id, owner.x + owner.dx, owner.z + owner.dz);
+      }
+    },
+    // Moves a unit to a point of the plate (kept inside its edge).
+    moveTo(id, x, z) {
+      const owner = units.get(id);
+      if (!owner?.movable) return;
+      // (A pond keeps well clear of the edge, or it would cut through the plate's side.)
+      const edge = owner.type === 'pond' ? owner.size * 1.12 + 0.75 : 0.3;
+      owner.dx = Math.min(Math.max(x, -plate.x + edge), plate.x - edge) - owner.x;
+      owner.dz = Math.min(Math.max(z, -plate.z + edge), plate.z - edge) - owner.z;
+      if (owner.type === 'pond') syncPonds();
+      else place(owner);
+      syncHalos();
+      mark();
+    },
+    // Takes a unit away. (What came with the garden is only hidden, so the
+    // rest keeps its place and it can come back.)
+    remove(id) {
+      const owner = units.get(id);
+      if (!owner) return;
+      owner.hidden = true;
+      if (owner.type === 'pond') syncPonds();
+      else place(owner);
+      if (owner.added) {
+        for (const mesh of meshesOf(id)) {
+          mesh.geometry.dispose();
+          mesh.removeFromParent();
+        }
+        owner.live?.removeFromParent();
+        for (let i = movers.length - 1; i >= 0; i -= 1) if (movers[i].unit === id) movers.splice(i, 1);
+        for (let i = glows.length - 1; i >= 0; i -= 1) if (glows[i][6] === id) glows.splice(i, 1);
+      }
+      syncHalos();
+      if (selected === id) selected = null;
+      mark();
+    },
+    restore(id) {
+      const owner = units.get(id);
+      if (!owner || owner.added) return;
+      owner.hidden = false;
+      place(owner);
+      syncHalos();
+    },
+    // Adds one more of something (see `makers`); resolves to its id.
+    async add(type, x, z) {
+      if (!makers[type]) return null;
+      const dug = [...units.values()].filter((u) => u.type === 'pond' && !u.hidden).length;
+      if ((type === 'pond' || type === 'bigpond') && dug >= MAX_PONDS) return null;
+      await makers[type](x, z, { added: true });
+      const id = unit;
+      await merge();
+      const owner = units.get(id);
+      if (owner.type === 'pond') syncPonds();
+      else place(owner);
+      syncHalos();
+      return id;
+    },
+    // Puts everything back the way it came.
+    reset() {
+      for (const owner of [...units.values()]) {
+        if (owner.added) this.remove(owner.id);
+        else Object.assign(owner, { dx: 0, dz: 0, hidden: false });
+      }
+      for (const id of [...units.keys()]) if (units.get(id).added) units.delete(id);
+      syncPonds();
+      this.setPlate(0);
+      refresh();
+      selected = null;
+      mark();
+    },
+    select(id) {
+      selected = units.has(id) ? id : null;
+      mark();
+    },
+    // Where a point of the view (x and y from -1 to 1) meets the ground.
+    floorAt(point, camera) {
+      raycaster.setFromCamera(point, camera);
+      return raycaster.ray.intersectPlane(floor, new THREE.Vector3());
+    },
+    // The unit drawn at a point of the view, if any. Only solid things
+    // count: not lights, mist or rings on the water. A pond is picked by
+    // the ground it was dug from.
     pick(point, camera) {
       raycaster.setFromCamera(point, camera);
-      const solid = [...statics.children];
-      for (const objects of owned.values()) {
-        for (const object of objects) if (!object.isSprite && !object.isPoints && object.userData.part !== 'ripples') solid.push(object);
-      }
-      for (const { object } of raycaster.intersectObjects(solid, true)) {
-        let node = object;
+      const solid = [...statics.children, ...ground.children];
+      for (const owner of units.values()) if (owner.live && owner.part !== 'ripples') solid.push(owner.live);
+      for (const hit of raycaster.intersectObjects(solid, true)) {
+        const { object } = hit;
+        if (object.isSprite || object.isPoints || object.material?.opacity === 0) continue;
         let visible = true;
         let id;
-        for (; node && node !== group; node = node.parent) {
+        for (let node = object; node && node !== group; node = node.parent) {
           visible &&= node.visible;
-          id ??= node.userData.part;
+          id ??= node.userData.unit;
         }
-        if (!visible || object.material?.opacity === 0) continue;
-        return !id || id === 'base' ? null : id;
+        if (!visible) continue;
+        if (id) return id;
+        // The ground: is it where a pond has been dug?
+        for (const owner of units.values()) {
+          if (owner.type !== 'pond' || owner.hidden) continue;
+          if (Math.hypot(hit.point.x - owner.x - owner.dx, hit.point.z - owner.z - owner.dz) < owner.size * 1.1) return owner.id;
+        }
+        return null;
       }
       return null;
     },
@@ -1339,10 +1656,11 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
       haloMaterial.uniforms.uScale.value = value;
     },
     update(t) {
-      for (const move of movers) move(t);
+      for (const mover of movers) mover.fn(t);
     },
     dispose() {
       statics.traverse((child) => child.geometry?.dispose());
+      ground.traverse((child) => child.geometry?.dispose());
       reflections.traverse((child) => child.geometry?.dispose());
       Object.values(materials).forEach((m) => m.dispose());
       extra.forEach((item) => item.dispose());

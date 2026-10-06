@@ -168,11 +168,12 @@ lavender, ice, aqua.
   stays put; later slides fade in.
 
 - **Playground** (`/playground`): holding the garden still for a second (a ring fills at the pointer;
-  `E` from the keyboard) opens a page that is all garden, with a switch for everything on the plate
-  (torii, mountain, deer, mist...). Tapping a thing in the 3D view hides it, with an Undo. The
-  choices live in the address (`?off=tmd`, one letter per part) and in the browser, never on the
-  server. There the garden is built with each part in meshes of its own (`split`); the hero keeps
-  everything merged, so it draws exactly as before.
+  `E` from the keyboard) opens a page that is all garden, to make your own. Every part has a switch;
+  single things (a tree, a deer, the torii) can be dragged across the plate, taken away or added; the
+  plate can grow; and ponds can be dug, which join the lake where they touch it. Dragging the ground
+  still turns the view. The garden is kept in the address (`?off=` for the switches, `?g=` for the
+  layout) and in the browser, never on the server. There the garden is built with each thing in
+  meshes of its own (`split`); the hero keeps everything merged, so it draws exactly as before.
 
 ## 5. Layout Principles
 

@@ -50,8 +50,8 @@ function fitDistance(aspect, { fill, bounds }) {
 // then, and stays without WebGL.
 //
 // The playground page uses it too, with `split` (each part of the garden can
-// then be hidden, through the api handed to `onGarden`), its own `frame`,
-// `captureWheel` (the wheel always zooms) and `onPick` (a tap on a part).
+// then be hidden, moved and added to, through what's handed to `onGarden`),
+// its own `frame` and `captureWheel` (the wheel always zooms).
 // `onHold` is the hero's way in to that page: a press held still.
 function HeroScene({
   apiRef,
@@ -63,7 +63,6 @@ function HeroScene({
   label = LABEL,
   hint = true,
   onGarden,
-  onPick,
   onHold,
   onHoldStart,
   onFail,
@@ -72,7 +71,7 @@ function HeroScene({
   const holdRef = useRef(null);
   const keyRef = useRef(null);
   const handlers = useRef({});
-  handlers.current = { onReady, onGarden, onPick, onHold, onHoldStart, onFail };
+  handlers.current = { onReady, onGarden, onHold, onHoldStart, onFail };
   const [ready, setReady] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -136,6 +135,7 @@ function HeroScene({
 
       // --- Camera ------------------------------------------------------------
       let fit = 10;
+      let bounds = framing.bounds;
       let wall = 0;
       let interacted = false;
       const orbit = createOrbit({
@@ -195,7 +195,7 @@ function HeroScene({
         camera.aspect = width / height;
         camera.setViewOffset(width, height, 0, (0.5 - framing.centerY) * height, width, height);
         camera.updateProjectionMatrix();
-        fit = fitDistance(camera.aspect, framing);
+        fit = fitDistance(camera.aspect, { fill: framing.fill, bounds });
         garden.setPixelScale((height * renderer.getPixelRatio()) / (2 * Math.tan(rad(FOV / 2))));
         if (compiled) wake();
       };
@@ -281,32 +281,27 @@ function HeroScene({
       // The pause button stops the garden too.
       if (apiRef) apiRef.current = { setPlaying: () => wake(), resetView: () => (orbit.home(), wake()) };
 
-      // The playground: parts can be switched off, here or by tapping them.
+      // The playground edits the garden through this (see scene/editor.js).
+      const redraw = () => {
+        renderer.shadowMap.needsUpdate = true;
+        wake();
+      };
       handlers.current.onGarden?.({
-        setVisible(id, on) {
-          garden.setVisible(id, on);
-          renderer.shadowMap.needsUpdate = true;
-          wake();
+        garden,
+        camera,
+        mount,
+        redraw,
+        resources,
+        // The plate changed size: frame it, and light all of it.
+        reframe() {
+          const { x, z } = garden.plate;
+          bounds = { min: { x: -x, y: framing.bounds.min.y, z: -z }, max: { x, y: framing.bounds.max.y, z } };
+          const reach = Math.max(x, z) + 2;
+          Object.assign(key.shadow.camera, { left: -reach, right: reach, top: reach, bottom: -reach });
+          key.shadow.camera.updateProjectionMatrix();
+          resize();
+          redraw();
         },
-      });
-      let press = null;
-      const onPressDown = (e) => {
-        press = { x: e.clientX, y: e.clientY, t: e.timeStamp };
-      };
-      const onPressUp = (e) => {
-        const tap = press && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && e.timeStamp - press.t < 300;
-        press = null;
-        if (!tap || !handlers.current.onPick) return;
-        const rect = mount.getBoundingClientRect();
-        const point = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, 1 - ((e.clientY - rect.top) / rect.height) * 2);
-        const id = garden.pick(point, camera);
-        if (id) handlers.current.onPick(id);
-      };
-      mount.addEventListener('pointerdown', onPressDown);
-      mount.addEventListener('pointerup', onPressUp);
-      resources.push(() => {
-        mount.removeEventListener('pointerdown', onPressDown);
-        mount.removeEventListener('pointerup', onPressUp);
       });
     }
 

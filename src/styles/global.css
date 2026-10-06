@@ -112,7 +112,9 @@ button {
   transition: top 0.2s;
 }
 
-.skip-link:focus {
+/* Shown for keyboard focus only: changing page with the mouse also moves
+   focus here, and mustn't flash it. */
+.skip-link:focus-visible {
   top: 12px;
 }
 

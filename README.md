@@ -113,8 +113,9 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
   at the first touch or scroll) and the 3D garden (`HeroScene.jsx`; `scene/garden.js` builds the model
   in code, in slices of a few milliseconds; `scene/orbit.js` handles drag, wheel, pinch and keyboard;
   `scene/parts.js` lists the parts a visitor can switch off in the playground).
-- `src/views/PlaygroundPage.jsx` — `/playground`: the garden full-page with a switch per part; opened by
-  holding the hero's garden. Choices are kept in the URL (`?off=`) and `localStorage`.
+- `src/views/PlaygroundPage.jsx` — `/playground`: the garden full-page, to edit (switch parts off, drag
+  things, add more, grow the plate, dig ponds; `scene/editor.js` handles the dragging); opened by holding
+  the hero's garden. The result is kept in the URL (`?off=`, `?g=`) and `localStorage`.
 - `src/smoothScroll.js` — the site's wheel scrolling: it glides to where the wheel sends it, with a top speed
   (`MAX_SPEED`). Touch, keyboard and scrollbar scrolling are the browser's own, as is everything with reduced motion.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
