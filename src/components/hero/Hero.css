@@ -7,6 +7,10 @@
   overflow: hidden;
   background: var(--void);
   color: var(--white);
+  /* Dragging turns the garden and swipes change the slide: neither should
+     select the words. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .hero__bg {
