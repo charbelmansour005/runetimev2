@@ -14,7 +14,6 @@ export const PARTS = [
   { id: 'lilies', code: 'y', label: 'Lily pads', group: 'Nature' },
   { id: 'deer', code: 'd', label: 'Deer', group: 'Wildlife' },
   { id: 'koi', code: 'f', label: 'Koi', group: 'Wildlife' },
-  { id: 'birds', code: 'i', label: 'Birds', group: 'Wildlife' },
   { id: 'fireflies', code: 'g', label: 'Fireflies', group: 'Wildlife' },
   { id: 'boats', code: 'o', label: 'Floating lanterns', group: 'Atmosphere' },
   { id: 'petals', code: 'e', label: 'Falling petals', group: 'Atmosphere' },

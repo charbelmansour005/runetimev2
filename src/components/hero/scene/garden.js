@@ -1361,63 +1361,6 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   }
   await pause();
 
-  // ---------- Birds ----------
-  // A small flock circling high over the garden in a loose V. Each bird is
-  // two triangles (its wings), all of them in one mesh moved every frame.
-  begin('birds', { movable: false });
-  {
-    const flock = [
-      [0, 0, 0],
-      [-0.22, 0.16, 0.04],
-      [-0.22, -0.16, -0.03],
-      [-0.45, 0.33, 0.07],
-      [-0.47, -0.31, 0.02],
-    ].map(([back, side, lift], i) => ({ back, side, lift, phase: i * 1.9, beat: span(5.2, 6.4) }));
-    const positions = new THREE.Float32BufferAttribute(new Float32Array(flock.length * 18), 3);
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', positions);
-    const material = new THREE.MeshBasicMaterial({ color: '#efe9ff', side: THREE.DoubleSide, toneMapped: false });
-    const birds = new THREE.Mesh(geometry, material);
-    birds.frustumCulled = false;
-    keep(birds);
-    extra.push(geometry, material);
-    const WING = 0.15;
-    const BODY = 0.075;
-    const place = (t) => {
-      // Round an oval, 40 seconds a lap, starting over the back of the garden.
-      const a = t * 0.157 + 2.2;
-      const cx = 0.3 + Math.cos(a) * 3.1;
-      const cz = Math.sin(a) * 2.2;
-      const cy = 2.55 + Math.sin(t * 0.3) * 0.12;
-      // Heading (along the path) and the level direction across it.
-      let hx = -Math.sin(a) * 3.1;
-      let hz = Math.cos(a) * 2.2;
-      const length = Math.hypot(hx, hz);
-      hx /= length;
-      hz /= length;
-      const rx = hz;
-      const rz = -hx;
-      flock.forEach((bird, i) => {
-        const x = cx + hx * bird.back + rx * bird.side;
-        const y = cy + bird.lift + Math.sin(t * 0.8 + bird.phase) * 0.02;
-        const z = cz + hz * bird.back + rz * bird.side;
-        const flap = Math.sin(t * bird.beat + bird.phase) * 0.75;
-        const out = Math.cos(flap) * WING;
-        const up = Math.sin(flap) * WING;
-        const o = i * 6;
-        for (const [k, side] of [-1, 1].entries()) {
-          positions.setXYZ(o + k * 3, x + hx * BODY, y, z + hz * BODY);
-          positions.setXYZ(o + k * 3 + 1, x - hx * BODY, y, z - hz * BODY);
-          positions.setXYZ(o + k * 3 + 2, x - hx * BODY * 0.4 + rx * out * side, y + up, z - hz * BODY * 0.4 + rz * out * side);
-        }
-      });
-      positions.needsUpdate = true;
-    };
-    place(0);
-    animate(place);
-  }
-  await pause();
-
   // The still parts, merged: one mesh per material (and per unit, in the
   // playground), and the same again for their reflections.
   const reflections = new THREE.Group();
