@@ -163,9 +163,16 @@ lavender, ice, aqua.
   until the first WebGL frame and lines up with it; it stays without WebGL or with Data Saver on.
   three.js starts loading only once the page has loaded and settled: on desktops when the browser is
   idle, on phones at the first touch or scroll (or 4 s after load), so a short visit never pays for it.
-- The headline slideshow uses the Web Animations API with transform and opacity only, so the sweeps
-  run on the compositor and stay smooth while the page is busy. The first headline arrives with the
-  page and stays put; only later slides sweep in.
+- The headline slideshow is a plain crossfade (Web Animations API, opacity only), so it runs on the
+  compositor and stays smooth while the page is busy. The first headline arrives with the page and
+  stays put; later slides fade in.
+
+- **Playground** (`/playground`): holding the garden still for a second (a ring fills at the pointer;
+  `E` from the keyboard) opens a page that is all garden, with a switch for everything on the plate
+  (torii, mountain, deer, mist...). Tapping a thing in the 3D view hides it, with an Undo. The
+  choices live in the address (`?off=tmd`, one letter per part) and in the browser, never on the
+  server. There the garden is built with each part in meshes of its own (`split`); the hero keeps
+  everything merged, so it draws exactly as before.
 
 ## 5. Layout Principles
 

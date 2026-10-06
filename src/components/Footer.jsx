@@ -8,6 +8,7 @@ const PRIMARY_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Work', href: '/work' },
   { label: 'Insights', href: '/insights' },
+  { label: 'Garden playground', href: '/playground' },
   { label: 'Contact', href: '/#contact' },
 ];
 

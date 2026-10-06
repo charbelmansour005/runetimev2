@@ -38,13 +38,16 @@ export const color = (value) => new THREE.Color(value);
 // material, with each part's transform and colour baked into its vertices.
 // (Written straight into one buffer: cloning and merging geometries made
 // building the garden several times slower.)
+// With `split`, each named part of the scene gets meshes of its own (so it
+// can be hidden); the meshes carry the part's name in `userData.part`.
 export class Batch {
-  constructor() {
+  constructor({ split = false } = {}) {
     this.parts = new Map();
+    this.split = split;
   }
 
-  add(key, geometry, transform, tint, { shadow = true } = {}) {
-    const bucket = `${key}${shadow ? '' : ':noshadow'}`;
+  add(key, geometry, transform, tint, { shadow = true, part = '' } = {}) {
+    const bucket = `${this.split ? `${part}|` : ''}${key}${shadow ? '' : ':noshadow'}`;
     if (!this.parts.has(bucket)) this.parts.set(bucket, []);
     const c = tint instanceof THREE.Color ? tint : color(tint ?? '#ffffff');
     this.parts.get(bucket).push({ geometry, transform, color: c });
@@ -97,16 +100,19 @@ export class Batch {
     return merged;
   }
 
-  // One mesh per material; `materials` maps a key to its material.
+  // One mesh per material (and per part, when split); `materials` maps a key
+  // to its material.
   async build(materials, { castShadow = true, receiveShadow = true, pause = async () => {} } = {}) {
     const group = new THREE.Group();
     for (const [bucket, parts] of this.parts) {
-      const [key, flag] = bucket.split(':');
+      const [name, flag] = bucket.split(':');
+      const [part, key] = name.includes('|') ? name.split('|') : ['', name];
       const merged = await Batch.merge(parts, pause);
       const mesh = new THREE.Mesh(merged, materials[key]);
       mesh.castShadow = castShadow && flag !== 'noshadow' && materials[key].userData.shadow !== false;
       mesh.receiveShadow = receiveShadow && materials[key].userData.shadow !== false;
       mesh.matrixAutoUpdate = false;
+      if (part) mesh.userData.part = part;
       group.add(mesh);
       await pause();
     }

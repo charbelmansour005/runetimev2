@@ -8,16 +8,18 @@ const FOV = 30;
 // Where the garden's centre sits, as a share of the canvas height, and how
 // much of the canvas it fills at full zoom-out (the tab bar covers the bottom
 // on desktop).
-const CENTER_Y = 0.45;
-const FILL = { x: 0.84, y: 0.66 };
+const HERO_FRAME = { centerY: 0.45, fill: { x: 0.84, y: 0.66 }, bounds: BOUNDS };
 const LABEL =
-  '3D illustration of a red torii gate standing in a pond, with a pagoda, stone lanterns and cherry trees on the shore. Drag to turn it and scroll to zoom, or use the arrow keys and the plus and minus keys.';
+  '3D illustration of a red torii gate standing in a pond, with a pagoda, a mountain with a waterfall, deer and cherry trees on the shore. Drag to turn it and scroll to zoom, or use the arrow keys and the plus and minus keys.';
+// How long a press must stay still to count as a hold, and how far it may stray.
+const HOLD_MS = 1000;
+const HOLD_SLACK = 8;
 
 const rad = THREE.MathUtils.degToRad;
 
 // The camera distance that fits the whole garden in the canvas, seen from the
 // starting angle.
-function fitDistance(aspect) {
+function fitDistance(aspect, { fill, bounds }) {
   const tanV = Math.tan(rad(FOV / 2));
   const tanH = tanV * aspect;
   const az = rad(HOME.az);
@@ -30,13 +32,13 @@ function fitDistance(aspect) {
   let distance = 0;
   for (let i = 0; i < 8; i += 1) {
     corner
-      .set(i & 1 ? BOUNDS.max.x : BOUNDS.min.x, i & 2 ? BOUNDS.max.y : BOUNDS.min.y, i & 4 ? BOUNDS.max.z : BOUNDS.min.z)
+      .set(i & 1 ? bounds.max.x : bounds.min.x, i & 2 ? bounds.max.y : bounds.min.y, i & 4 ? bounds.max.z : bounds.min.z)
       .sub(center);
     const depth = corner.dot(forward);
     distance = Math.max(
       distance,
-      Math.abs(corner.dot(right)) / (tanH * FILL.x) - depth,
-      Math.abs(corner.dot(up)) / (tanV * FILL.y) - depth,
+      Math.abs(corner.dot(right)) / (tanH * fill.x) - depth,
+      Math.abs(corner.dot(up)) / (tanV * fill.y) - depth,
     );
   }
   return distance;
@@ -46,11 +48,31 @@ function fitDistance(aspect) {
 // every slide, and the visitor can turn it and zoom in. Built in code once
 // the page has settled (Hero.jsx decides when); the poster stands in until
 // then, and stays without WebGL.
-function HeroScene({ apiRef, playingRef, onReady }) {
+//
+// The playground page uses it too, with `split` (each part of the garden can
+// then be hidden, through the api handed to `onGarden`), its own `frame`,
+// `captureWheel` (the wheel always zooms) and `onPick` (a tap on a part).
+// `onHold` is the hero's way in to that page: a press held still.
+function HeroScene({
+  apiRef,
+  playingRef,
+  onReady,
+  split = false,
+  frame: framing = HERO_FRAME,
+  captureWheel = false,
+  label = LABEL,
+  hint = true,
+  onGarden,
+  onPick,
+  onHold,
+  onHoldStart,
+  onFail,
+}) {
   const mountRef = useRef(null);
+  const holdRef = useRef(null);
   const keyRef = useRef(null);
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
+  const handlers = useRef({});
+  handlers.current = { onReady, onGarden, onPick, onHold, onHoldStart, onFail };
   const [ready, setReady] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -68,7 +90,8 @@ function HeroScene({ apiRef, playingRef, onReady }) {
       try {
         renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
       } catch {
-        return; // No WebGL: the poster stays.
+        handlers.current.onFail?.(); // No WebGL: the poster stays.
+        return;
       }
       let pixelRatio = Math.min(window.devicePixelRatio, 2);
       renderer.setPixelRatio(pixelRatio);
@@ -106,7 +129,7 @@ function HeroScene({ apiRef, playingRef, onReady }) {
       await yieldNow();
       if (disposed) return teardown();
       // Built in slices of a few milliseconds, so the page stays responsive.
-      const garden = await buildGarden({ pause: makePause(6) });
+      const garden = await buildGarden({ pause: makePause(6), split });
       resources.push(() => garden.dispose());
       if (disposed) return teardown();
       scene.add(garden.group);
@@ -119,6 +142,7 @@ function HeroScene({ apiRef, playingRef, onReady }) {
         element: mount,
         camera,
         reduced,
+        captureWheel,
         onInput: () => {
           if (!interacted) {
             interacted = true;
@@ -131,7 +155,7 @@ function HeroScene({ apiRef, playingRef, onReady }) {
       resources.push(() => {
         orbit.dispose();
         keyRef.current = null;
-        apiRef.current = null;
+        if (apiRef) apiRef.current = null;
       });
 
       const placeCamera = () => {
@@ -159,7 +183,7 @@ function HeroScene({ apiRef, playingRef, onReady }) {
         renderer.render(scene, camera);
         if (!shown) {
           shown = true;
-          onReadyRef.current?.();
+          handlers.current.onReady?.();
           setReady(true);
         }
       };
@@ -169,9 +193,9 @@ function HeroScene({ apiRef, playingRef, onReady }) {
         const height = mount.clientHeight || 1;
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
-        camera.setViewOffset(width, height, 0, (0.5 - CENTER_Y) * height, width, height);
+        camera.setViewOffset(width, height, 0, (0.5 - framing.centerY) * height, width, height);
         camera.updateProjectionMatrix();
-        fit = fitDistance(camera.aspect);
+        fit = fitDistance(camera.aspect, framing);
         garden.setPixelScale((height * renderer.getPixelRatio()) / (2 * Math.tan(rad(FOV / 2))));
         if (compiled) wake();
       };
@@ -255,7 +279,35 @@ function HeroScene({ apiRef, playingRef, onReady }) {
       io.observe(mount);
 
       // The pause button stops the garden too.
-      apiRef.current = { setPlaying: () => wake() };
+      if (apiRef) apiRef.current = { setPlaying: () => wake(), resetView: () => (orbit.home(), wake()) };
+
+      // The playground: parts can be switched off, here or by tapping them.
+      handlers.current.onGarden?.({
+        setVisible(id, on) {
+          garden.setVisible(id, on);
+          renderer.shadowMap.needsUpdate = true;
+          wake();
+        },
+      });
+      let press = null;
+      const onPressDown = (e) => {
+        press = { x: e.clientX, y: e.clientY, t: e.timeStamp };
+      };
+      const onPressUp = (e) => {
+        const tap = press && Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && e.timeStamp - press.t < 300;
+        press = null;
+        if (!tap || !handlers.current.onPick) return;
+        const rect = mount.getBoundingClientRect();
+        const point = new THREE.Vector2(((e.clientX - rect.left) / rect.width) * 2 - 1, 1 - ((e.clientY - rect.top) / rect.height) * 2);
+        const id = garden.pick(point, camera);
+        if (id) handlers.current.onPick(id);
+      };
+      mount.addEventListener('pointerdown', onPressDown);
+      mount.addEventListener('pointerup', onPressUp);
+      resources.push(() => {
+        mount.removeEventListener('pointerdown', onPressDown);
+        mount.removeEventListener('pointerup', onPressUp);
+      });
     }
 
     // The code has only just arrived: let the browser paint first.
@@ -268,23 +320,92 @@ function HeroScene({ apiRef, playingRef, onReady }) {
       disposed = true;
       teardown();
     };
-  }, [apiRef, playingRef]);
+  }, [apiRef, playingRef, split, framing, captureWheel]);
 
+  // A press held still on the garden for a second opens the playground: a
+  // ring fills at the pointer meanwhile. Moving (that's a drag), letting go,
+  // a second finger or the wheel calls it off.
+  const holds = Boolean(onHold);
+  useEffect(() => {
+    if (!holds || !ready) return undefined;
+    const mount = mountRef.current;
+    const ring = holdRef.current;
+    let hold = null;
+    const cancel = () => {
+      if (!hold) return;
+      clearTimeout(hold.timer);
+      hold = null;
+      ring.classList.remove('is-on');
+    };
+    const onDown = (e) => {
+      cancel();
+      if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      const rect = mount.getBoundingClientRect();
+      ring.style.left = `${e.clientX - rect.left}px`;
+      ring.style.top = `${e.clientY - rect.top}px`;
+      ring.classList.add('is-on');
+      handlers.current.onHoldStart?.();
+      hold = {
+        x: e.clientX,
+        y: e.clientY,
+        timer: setTimeout(() => {
+          cancel();
+          handlers.current.onHold?.();
+        }, HOLD_MS),
+      };
+    };
+    const onMove = (e) => {
+      if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > HOLD_SLACK) cancel();
+    };
+    // A long press mustn't open the browser's own menu instead.
+    const onMenu = (e) => hold && e.preventDefault();
+    const stops = ['pointerup', 'pointercancel', 'pointerleave', 'wheel'];
+    mount.addEventListener('pointerdown', onDown);
+    mount.addEventListener('pointermove', onMove);
+    mount.addEventListener('contextmenu', onMenu);
+    stops.forEach((type) => mount.addEventListener(type, cancel, { passive: true }));
+    window.addEventListener('scroll', cancel, { passive: true });
+    return () => {
+      cancel();
+      mount.removeEventListener('pointerdown', onDown);
+      mount.removeEventListener('pointermove', onMove);
+      mount.removeEventListener('contextmenu', onMenu);
+      stops.forEach((type) => mount.removeEventListener(type, cancel));
+      window.removeEventListener('scroll', cancel);
+    };
+  }, [holds, ready]);
+
+  const onKeyDown = (e) => {
+    // E (for edit) is the keyboard's way in to the playground.
+    if (holds && (e.key === 'e' || e.key === 'E') && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      handlers.current.onHold?.();
+      return;
+    }
+    keyRef.current?.(e);
+  };
   // Until it's drawn (or without WebGL), it's only decoration.
   const a11y = ready
-    ? { role: 'img', 'aria-label': LABEL, tabIndex: 0, onKeyDown: (e) => keyRef.current?.(e) }
+    ? { role: 'img', 'aria-label': holds ? `${label} Press E to edit it in the playground.` : label, tabIndex: 0, onKeyDown }
     : { 'aria-hidden': true };
   return (
     <div className={`hero-scene${ready ? ' is-ready' : ''}${touched ? ' is-touched' : ''}`} {...a11y}>
       <div ref={mountRef} className="hero-scene__canvas" />
-      {ready && (
+      {holds && (
+        <span ref={holdRef} className="hero-hold" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <circle cx="24" cy="24" r="20" />
+          </svg>
+        </span>
+      )}
+      {ready && hint && (
         <p className="hero-scene__hint" aria-hidden="true">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 12h4M16 12h4M12 4v4M12 16v4" />
             <circle cx="12" cy="12" r="2.5" />
           </svg>
-          <span className="hero-scene__hint-mouse">Drag to turn · Scroll to zoom</span>
-          <span className="hero-scene__hint-touch">Drag to turn · Pinch to zoom</span>
+          <span className="hero-scene__hint-mouse">Drag to turn · Scroll to zoom{holds && ' · Hold to edit'}</span>
+          <span className="hero-scene__hint-touch">Drag to turn · Pinch to zoom{holds && ' · Hold to edit'}</span>
         </p>
       )}
     </div>

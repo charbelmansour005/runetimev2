@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { at, Batch, block, color, cylinder, faceted, glowSprite, halo } from './kit';
+import { NEEDS } from './parts';
 
 // The hero's miniature: a vermilion torii gate standing in a pond at dusk,
 // with a pagoda, stone lanterns, an arched bridge and cherry trees on the
@@ -32,6 +33,9 @@ const C = {
   paper: '#ffcf8a',
   deep: '#081428',
   wood: '#5a3b33',
+  bamboo: ['#8fbf55', '#7aa848', '#a3cc66'],
+  bambooDark: '#55803a',
+  leaf: ['#9ad05c', '#6fa644', '#b6dd72'],
 };
 
 const WATER = -0.08;
@@ -109,12 +113,29 @@ const pyramid = (r, h) => faceted(new THREE.ConeGeometry(r, h, 4).rotateY(Math.P
 // Built in slices: `pause` is awaited often, and yields to the browser only
 // once the current slice has used up its time (see makePause in kit.js), so
 // even a slow phone stays responsive while the garden is built.
-export async function buildGarden({ pause = async () => {} } = {}) {
+//
+// With `split` (the playground), every part of the garden (see parts.js) is
+// kept in meshes of its own, so it can be switched off; otherwise everything
+// still is merged into one mesh per material.
+export async function buildGarden({ pause = async () => {}, split = false } = {}) {
   const rand = seeded(7);
   const between = (min, max) => min + rand() * (max - min);
-  const batch = new Batch();
-  const mirror = new Batch(); // the same parts upside down, seen in the water
+  const batch = new Batch({ split });
+  const mirror = new Batch({ split }); // the same parts upside down, seen in the water
   const group = new THREE.Group();
+  // What's being built now: everything added belongs to this part.
+  let part = 'base';
+  const section = (id) => {
+    part = id;
+  };
+  // Things that move are added one by one, and remembered by part.
+  const owned = new Map();
+  const keep = (...objects) => {
+    group.add(...objects);
+    if (!owned.has(part)) owned.set(part, []);
+    owned.get(part).push(...objects);
+    for (const object of objects) object.userData.part = part;
+  };
   const movers = [];
   const glows = []; // static light halos: x, y, z, size, colour, strength
   const extra = []; // geometries, materials and textures to dispose of
@@ -177,18 +198,19 @@ export async function buildGarden({ pause = async () => {} } = {}) {
 
   // Adds a part and, unless told otherwise, its reflection.
   function add(key, geometry, transform, tint, { reflect = true, shadow = true } = {}) {
-    batch.add(key, geometry, transform, tint, { shadow });
+    batch.add(key, geometry, transform, tint, { shadow, part });
     if (reflect) {
       const c = color(tint ?? '#ffffff').multiplyScalar(REFLECTED[key] ?? 1);
-      mirror.add('mirror', geometry, FLIP.clone().multiply(transform), c);
+      mirror.add('mirror', geometry, FLIP.clone().multiply(transform), c, { part });
     }
   }
 
+  const shine = (x, y, z, size, tint, strength = 1) => glows.push([x, y, z, size, tint, strength, part]);
   const glow = (x, y, z, size, tint, strength = 1) => {
-    glows.push([x, y, z, size, tint, strength]);
+    shine(x, y, z, size, tint, strength);
     // And its reflection, unless that would fall below the base.
     const mirrored = 2 * WATER - y;
-    if (mirrored > -DEPTH + 0.2) glows.push([x, mirrored, z, size * 0.9, tint, strength * 0.45]);
+    if (mirrored > -DEPTH + 0.2) shine(x, mirrored, z, size * 0.9, tint, strength * 0.45);
   };
 
   // ---------- Pond outline ----------
@@ -275,6 +297,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   // ---------- The torii ----------
   // The great gate in the water: two pillars, each braced by a smaller post
   // in front and behind, under a curved, roofed lintel.
+  section('torii');
   {
     const T = at(TORII.x, 0, TORII.z, { ry: TORII.ry, s: TORII.s });
     const put = (key, geometry, local, tint, options) => add(key, geometry, T.clone().multiply(local), tint, options);
@@ -302,18 +325,19 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     put('solid', block(0.26, 0.34, 0.07, 0.015), at(0, 1.63, 0), C.roof);
     for (const z of [-0.04, 0.04]) put('glow', block(0.18, 0.26, 0.012, 0.004), at(0, 1.67, z), C.gold);
     // The gate glows a little in the dusk, and so does the water at its feet.
-    glows.push([TORII.x, 1.3 * TORII.s, TORII.z, 2.3 * TORII.s, C.vermilion, 0.22]);
+    shine(TORII.x, 1.3 * TORII.s, TORII.z, 2.3 * TORII.s, C.vermilion, 0.22);
     glow(TORII.x, 1.67 * TORII.s, TORII.z, 0.9, C.gold, 0.4);
     for (const side of [-1, 1]) {
       const foot = new THREE.Vector3(side * 1.15, 0, 0).applyMatrix4(T);
-      glows.push([foot.x, WATER + 0.03, foot.z, 1.5, C.vermilion, 0.22]);
+      shine(foot.x, WATER + 0.03, foot.z, 1.5, C.vermilion, 0.22);
     }
-    glows.push([TORII.x, WATER + 0.03, TORII.z + 1.5, 2.6, C.dusk, 0.2]);
+    shine(TORII.x, WATER + 0.03, TORII.z + 1.5, 2.6, C.dusk, 0.2);
   }
 
   await pause();
 
   // ---------- Pagoda (back right) ----------
+  section('pagoda');
   {
     const [px, pz] = [2.95, -2.75];
     add('solid', block(1.5, 0.1, 1.5, 0.03), at(px, 0, pz), C.stone);
@@ -355,6 +379,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
 
   // ---------- Bridge (back left) ----------
   // An arched footbridge over the pond's narrow arm.
+  section('bridge');
   {
     const B = at(BRIDGE.x, 0, BRIDGE.z, { ry: BRIDGE.ry });
     const put = (key, geometry, local, tint) => add(key, geometry, B.clone().multiply(local), tint);
@@ -381,6 +406,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   await pause();
 
   // ---------- Trees ----------
+  section('trees');
   const crown = faceted(new THREE.IcosahedronGeometry(1, 1));
   const disc = faceted(new THREE.IcosahedronGeometry(1, 0));
   async function blossom(x, z, size, palette) {
@@ -418,19 +444,20 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   const cherries = [
     [-0.7, -2.85, 0.95],
     [0.9, -3.15, 0.8],
-    [-4.15, 2.95, 0.85],
+    [-1.6, 3.5, 0.72],
     [4.25, -1.6, 0.7],
   ];
   for (const [x, z, size] of cherries) await blossom(x, z, size, C.cherry);
   await blossom(1.55, -2.55, 0.62, C.maple);
   await blossom(-4.3, -3.1, 0.75, C.maple);
   await blossom(4.2, 1.2, 0.6, C.maple);
-  await pine(-4.3, 0.5, 0.95);
+  await pine(-4.55, -0.4, 0.7);
   await pine(-4.25, -0.75, 0.7);
   await pine(4.15, 3.05, 0.9);
   await pine(-1.75, -3.3, 0.75);
 
   // ---------- Stone lanterns ----------
+  section('lanterns');
   async function lantern(x, z, size = 1) {
     const s = size;
     add('solid', block(0.2 * s, 0.05 * s, 0.2 * s, 0.01), at(x, 0, z), C.stoneDark);
@@ -451,8 +478,9 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     await pause();
   }
   for (const [x, z, size] of [
-    [-2.25, -2.95, 1.1],
-    [-3.75, -1.25, 1.1],
+    // Beside the bridge's two ends, clear of the way across.
+    [-1.93, -2.72, 1.1],
+    [-4.08, -1.52, 1.1],
     [1.25, -2.05, 1],
     [3.95, 0.3, 1],
     [0.9, 3.45, 1.1],
@@ -463,6 +491,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   }
 
   // ---------- Rocks, bushes and lily pads ----------
+  section('rocks');
   const rock = faceted(new THREE.DodecahedronGeometry(1, 0));
   // Along the water's edge, half in the shallows.
   for (let i = 0; i < outline.length; i += 1) {
@@ -489,6 +518,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     await pause();
   }
 
+  section('lilies');
   const pad = new THREE.CircleGeometry(1, 9, 0.5, Math.PI * 2 - 0.9).rotateX(-Math.PI / 2);
   const petal = faceted(new THREE.OctahedronGeometry(1, 0));
   for (let placed = 0, tries = 0; placed < 22 && tries < 500; tries += 1) {
@@ -502,7 +532,394 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     await pause();
   }
 
+  // ---------- Mountain, waterfall and bamboo ----------
+  // The left corner is a mountain, with a spring that steps down a cliff at
+  // its foot into the pond and bamboo at either end. Placed by its own numbers, like the living things
+  // further down, so nothing else in the garden moves.
+  {
+    const grove = seeded(41);
+    const some = (min, max) => min + grove() * (max - min);
+    const FALL = { x: -3.9, z: 1.4, step: 0.55, top: 1.2 };
+    section('waterfall');
+    // A small cliff of stacked slabs in two tiers, its front standing in the
+    // shallows: the water drops from the top onto the lower tier, crosses it
+    // and drops again into the pond. Rock walls hug the water all the way
+    // down, so it runs in a channel and its edges never show.
+    for (const [dx, y, dz, w, h, d, ry, tint] of [
+      [-0.02, -0.14, 0.0, 1.0, 0.34, 1.12, 0.03, 1],
+      [-0.03, 0.2, 0.02, 1.02, 0.18, 1.04, -0.04, 0],
+      [-0.02, 0.38, -0.02, 0.96, 0.17, 0.98, 0.05, 2],
+      [-0.28, 0.55, 0.0, 0.56, 0.22, 0.92, -0.06, 0],
+      [-0.3, 0.77, 0.02, 0.5, 0.2, 0.84, 0.09, 1],
+      [-0.32, 0.97, -0.02, 0.46, 0.23, 0.8, -0.04, 2],
+      // Either side of the channel along the top...
+      [-0.28, 1.2, 0.3, 0.36, 0.1, 0.16, 0.08, 0],
+      [-0.3, 1.2, -0.31, 0.38, 0.13, 0.16, -0.06, 1],
+      // ...down the upper fall...
+      [0.09, 0.55, 0.33, 0.3, 0.74, 0.15, 0.05, 2],
+      [0.1, 0.55, -0.34, 0.3, 0.8, 0.15, -0.04, 0],
+      // ...across the lower tier...
+      [0.3, 0.55, 0.36, 0.26, 0.2, 0.15, -0.05, 1],
+      [0.31, 0.55, -0.37, 0.26, 0.24, 0.15, 0.06, 2],
+      // ...and down the lower fall, into the pond.
+      [0.52, -0.14, 0.4, 0.22, 0.8, 0.17, 0.04, 0],
+      [0.53, -0.14, -0.41, 0.22, 0.86, 0.17, -0.05, 1],
+    ]) {
+      add('solid', block(w, h, d, 0.03), at(FALL.x + dx, y, FALL.z + dz, { ry }), C.rock[tint]);
+    }
+    // Fallen boulders at its foot.
+    for (const [dx, dz, sx, sy, sz, ry, tint] of [
+      [0.5, 0.62, 0.2, 0.15, 0.2, 0.9, 2],
+      [0.48, -0.64, 0.17, 0.12, 0.2, 3.0, 0],
+      [0.2, 0.74, 0.16, 0.12, 0.15, 1.6, 1],
+    ]) {
+      add('solid', rock, at(FALL.x + dx, 0, FALL.z + dz, { sx, sy, sz, ry }), C.rock[tint]);
+    }
+    await pause();
+
+    // The mountain: it fills the whole corner and stands twice as tall as
+    // the torii. Blunt, flat-topped masses with roughened sides, the tallest
+    // behind the falls; the spring's channel starts inside it, and a shoulder
+    // on either side puts the falls in a gorge.
+    section('mountain');
+    const mass = (sides) => {
+      const geometry = new THREE.CylinderGeometry(0.42, 1, 1, sides, 5).translate(0, 0.5, 0);
+      const spot = geometry.attributes.position;
+      for (let i = 0; i < spot.count; i += 1) {
+        const [x, y, z] = [spot.getX(i), spot.getY(i), spot.getZ(i)];
+        // The same push for every copy of a corner, so the faces stay joined.
+        const noise = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+        const push = 1 + (noise - Math.floor(noise) - 0.5) * 0.3;
+        spot.setXYZ(i, x * push, y, z * push);
+      }
+      return faceted(geometry);
+    };
+    const masses = [
+      [-0.64, 0.3, 0.56, 5.7, 1.6, 0, '#7d77a0'],
+      [-0.62, 1.45, 0.58, 4.5, 1.0, 0.4, '#6c668e'],
+      [-0.25, 1.72, 0.84, 3.6, 0.86, 0.9, '#8680a8'],
+      [-0.26, 0.98, 0.68, 1.7, 0.5, 0, '#8a84ac'],
+      [-0.3, -1.04, 0.68, 2.1, 0.6, 0, '#847ea6'],
+      [-0.66, -0.6, 0.5, 3.4, 0.8, 0.6, '#746e98'],
+    ];
+    for (const [dx, dz, rx, height, rz, ry, tint] of masses) {
+      add('solid', mass(8), at(FALL.x + dx, 0, FALL.z + dz, { sx: rx, sy: height, sz: rz, ry }), tint);
+      await pause();
+    }
+    // Scrub clinging to the slopes that face the pond, and growing on the
+    // flat tops.
+    for (const [dx, dz, rx, height, rz] of masses) {
+      for (let k = 0; k < 12; k += 1) {
+        const up = some(0.04, 0.75);
+        const round = some(-1.3, 1.3);
+        const wide = 1 - up * 0.58;
+        const size = some(0.1, 0.19);
+        add(
+          'solid',
+          bush,
+          at(FALL.x + dx + Math.cos(round) * rx * wide * 0.97, height * up, FALL.z + dz + Math.sin(round) * rz * wide * 0.97, {
+            sx: size * 1.2,
+            sy: size * 0.7,
+            sz: size * 1.2,
+            ry: k * 1.3,
+          }),
+          [C.mossLight, C.pine[0], C.pine[2], C.moss][k % 4],
+          { reflect: false },
+        );
+      }
+      for (let k = 0; k < 4; k += 1) {
+        const size = some(0.12, 0.2);
+        add(
+          'solid',
+          bush,
+          at(FALL.x + dx + some(-0.3, 0.3) * rx, height, FALL.z + dz + some(-0.3, 0.3) * rz, { sx: size * 1.3, sy: size * 0.5, sz: size * 1.3, ry: k * 2.1 }),
+          [C.mossLight, C.pine[2], C.pad, C.pine[0]][k],
+          { reflect: false },
+        );
+      }
+      await pause();
+    }
+
+    // Bamboo: thin jointed canes with a few leaves near the top, in two
+    // stands at the mountain's two ends.
+    section('bamboo');
+    const leaf = faceted(new THREE.OctahedronGeometry(1, 0));
+    const canes = [
+      [-0.12, -1.72], [-0.3, -1.85], [-0.48, -1.7], [-0.22, -2.02], [-0.42, -1.98], [-0.05, -1.92],
+      [0.72, 1.98], [0.88, 2.12], [0.78, 2.26], [0.98, 1.95], [1.04, 2.2], [0.9, 2.32],
+    ];
+    for (const [i, [dx, dz]] of canes.entries()) {
+      const x = FALL.x + dx;
+      const z = FALL.z + dz;
+      const height = some(0.9, 1.5);
+      const lean = { rx: some(-0.07, 0.07), rz: some(-0.07, 0.07) };
+      const green = C.bamboo[i % C.bamboo.length];
+      add('solid', cylinder(0.022, 0.03, height, 6), at(x, 0, z, lean), green);
+      // The joints.
+      for (let y = 0.3; y < height - 0.1; y += 0.32) {
+        add('solid', cylinder(0.034, 0.034, 0.014, 6), at(x - lean.rz * y, y, z + lean.rx * y), C.bambooDark, { reflect: false });
+      }
+      for (let k = 0; k < 6; k += 1) {
+        const y = height * some(0.55, 1.0);
+        const turn = some(0, 6.28);
+        const length = some(0.13, 0.2);
+        add(
+          'solid',
+          leaf,
+          at(x - lean.rz * y + Math.cos(turn) * length * 0.8, y, z + lean.rx * y - Math.sin(turn) * length * 0.8, {
+            sx: length,
+            sy: 0.012,
+            sz: 0.035,
+            ry: turn,
+            rz: some(-0.7, -0.2),
+          }),
+          C.leaf[k % C.leaf.length],
+          { reflect: false },
+        );
+      }
+      await pause();
+    }
+
+    section('waterfall');
+    // Moss on the ledges and tops, with a few fronds hanging from it.
+    for (const [i, [dx, y, dz, size]] of [
+      [-0.44, 1.2, 0.14, 0.13], [-0.42, 1.2, -0.12, 0.11], [-0.24, 1.3, 0.31, 0.12], [-0.26, 1.33, -0.32, 0.13],
+      [0.1, 1.29, 0.33, 0.12], [0.12, 1.35, -0.34, 0.11], [0.3, 0.75, 0.37, 0.1], [0.32, 0.79, -0.38, 0.1],
+      [0.52, 0.66, 0.4, 0.1], [0.54, 0.72, -0.41, 0.1], [-0.1, 0.55, 0.47, 0.14], [-0.06, 0.55, -0.48, 0.13],
+      [0.2, 0.55, 0.5, 0.1], [-0.36, 0.38, 0.5, 0.11], [-0.3, 0.2, -0.54, 0.12], [0.3, 0.2, 0.55, 0.1],
+      [0.36, 0.38, -0.5, 0.09], [-0.5, 0.77, 0.36, 0.11], [-0.52, 0.97, -0.3, 0.1], [0.46, 0.2, -0.55, 0.1],
+    ].entries()) {
+      const x = FALL.x + dx;
+      const z = FALL.z + dz;
+      const tint = [C.mossLight, C.pad, C.pine[2], C.leaf[1]][i % 4];
+      add('solid', bush, at(x, y, z, { sx: size * 1.25, sy: size * 0.42, sz: size * 1.1, ry: i * 1.7 }), tint, { reflect: false });
+      if (i % 2) continue;
+      for (let k = 0; k < 3; k += 1) {
+        const turn = i + k * 2.1;
+        const length = some(0.08, 0.13);
+        add(
+          'solid',
+          leaf,
+          at(x + Math.cos(turn) * length * 0.9, y + 0.02, z - Math.sin(turn) * length * 0.9, { sx: length, sy: 0.01, sz: 0.03, ry: turn, rz: -0.5 }),
+          C.leaf[k % C.leaf.length],
+          { reflect: false },
+        );
+      }
+    }
+    await pause();
+
+    // The water: one ribbon that runs along the top, falls to the lower
+    // tier, crosses it and falls again, widening as it goes. The pond's blue,
+    // with a slow shimmer.
+    const course = [
+      [-0.42, FALL.top + 0.015, 0.22],
+      [-0.05, FALL.top + 0.015, 0.22],
+      [0.0, FALL.top - 0.08, 0.25],
+      [0.03, FALL.step + 0.02, 0.26],
+      [0.45, FALL.step + 0.02, 0.29],
+      [0.51, FALL.step - 0.08, 0.31],
+      [0.56, WATER, 0.32],
+    ];
+    const foot = [FALL.x + 0.58, WATER, FALL.z];
+    const ribbon = new THREE.BufferGeometry();
+    const spots = [];
+    const uvs = [];
+    const faces = [];
+    let run = 0;
+    course.forEach(([dx, y, half], i) => {
+      if (i) run += Math.hypot(dx - course[i - 1][0], y - course[i - 1][1]);
+      spots.push(FALL.x + dx, y, FALL.z - half, FALL.x + dx, y, FALL.z + half);
+      uvs.push(0, -run, 1, -run);
+      if (i) faces.push(i * 2 - 2, i * 2 - 1, i * 2, i * 2 - 1, i * 2 + 1, i * 2);
+    });
+    ribbon.setAttribute('position', new THREE.Float32BufferAttribute(spots, 3));
+    ribbon.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    ribbon.setIndex(faces);
+    const fallMaterial = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform float uTime;
+        varying vec2 vUv;
+        void main() {
+          // A blue gradient, deep at the edges and paler down the middle,
+          // with a slow shimmer running down it.
+          float middle = 1.0 - abs(vUv.x - 0.5) * 2.0;
+          float shimmer = sin(vUv.y * 9.0 + uTime * 4.5 + sin(vUv.x * 7.0) * 1.5) * 0.5 + 0.5;
+          vec3 tint = mix(vec3(0.07, 0.24, 0.6), vec3(0.26, 0.52, 0.92), middle * 0.6 + shimmer * 0.28);
+          float edge = smoothstep(0.0, 0.12, vUv.x) * smoothstep(1.0, 0.88, vUv.x);
+          gl_FragColor = vec4(tint, edge * 0.92);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
+    const fall = new THREE.Mesh(ribbon, fallMaterial);
+    fall.renderOrder = 3;
+    keep(fall);
+    extra.push(ribbon, fallMaterial);
+
+    // Where it lands: white water, and rings spreading over the pond.
+    const foam = glowSprite('#7fb2ff', 0.7, 0.5);
+    foam.position.set(foot[0] + 0.04, WATER + 0.08, foot[2]);
+    const splash = glowSprite('#7fb2ff', 0.45, 0.4);
+    splash.position.set(FALL.x + 0.08, FALL.step + 0.08, FALL.z);
+    keep(splash);
+    extra.push(splash.material);
+    const ringGeometry = new THREE.RingGeometry(0.9, 1, 32).rotateX(-Math.PI / 2);
+    extra.push(foam.material, ringGeometry);
+    keep(foam);
+    const rings = [0, 1.1, 2.2].map((offset) => {
+      const material = new THREE.MeshBasicMaterial({
+        color: '#8fbcff',
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const mesh = new THREE.Mesh(ringGeometry, material);
+      mesh.position.set(foot[0] + 0.1, WATER + 0.005, foot[2]);
+      mesh.renderOrder = 3;
+      keep(mesh);
+      extra.push(material);
+      return { mesh, material, offset };
+    });
+    const flow = (t) => {
+      fallMaterial.uniforms.uTime.value = t;
+      foam.material.opacity = 0.34 + Math.sin(t * 9.0) * 0.06 + Math.sin(t * 5.3) * 0.05;
+      splash.material.opacity = 0.26 + Math.sin(t * 7.0 + 1.0) * 0.06;
+      for (const { mesh, material, offset } of rings) {
+        const f = ((t + offset) % 3.3) / 3.3;
+        mesh.scale.setScalar(0.12 + f * 0.55);
+        material.opacity = 0.4 * (1 - f) ** 1.5;
+      }
+    };
+    flow(0);
+    movers.push(flow);
+    glow(foot[0], 0.3, foot[2], 1.1, '#bcd8ff', 0.3);
+  }
+  await pause();
+
+  // ---------- Deer ----------
+  // The shrine's deer, on the front shore: a stag keeping watch and two does,
+  // one of them grazing. Bodies are part of the still garden; only the necks
+  // and heads move.
+  section('deer');
+  {
+    const coat = { fur: '#c08348', dark: '#7b4b2a', pale: '#f3e6d2', antler: '#e6d8bb', nose: '#2a1d1c' };
+    const live = Object.fromEntries(
+      Object.entries(coat).map(([key, value]) => [key, new THREE.MeshStandardMaterial({ color: value, roughness: 0.85, flatShading: true })]),
+    );
+    const shapes = {
+      neck: block(0.062, 0.21, 0.062, 0.012),
+      head: block(0.125, 0.062, 0.066, 0.014),
+      snout: block(0.03, 0.036, 0.04, 0.008),
+      ear: faceted(new THREE.OctahedronGeometry(1, 0)),
+      tine: cylinder(0.004, 0.008, 1, 5),
+    };
+    extra.push(...Object.values(live), ...Object.values(shapes));
+    const part = (geometry, material, x, y, z, turn = {}) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x, y, z);
+      mesh.rotation.set(turn.rx ?? 0, turn.ry ?? 0, turn.rz ?? 0);
+      if (turn.scale) mesh.scale.set(...turn.scale);
+      return mesh;
+    };
+    const herd = [
+      { x: 3.05, z: 3.0, ry: 2.5, size: 1.25, stag: true, phase: 0 },
+      { x: 2.4, z: 3.35, ry: 3.6, size: 1.05, grazes: true, phase: 0.2 },
+      { x: 1.7, z: 3.45, ry: 2.2, size: 1.0, grazes: true, phase: 0.63 },
+    ];
+    for (const deer of herd) {
+      const M = at(deer.x, 0, deer.z, { ry: deer.ry, s: deer.size });
+      const put = (geometry, local, tint) => add('solid', geometry, M.clone().multiply(local), tint, { reflect: false });
+      // Facing +x: body, rump, tail, four legs and a few spots along the back.
+      put(block(0.34, 0.135, 0.12, 0.03), at(0, 0.215, 0), coat.fur);
+      put(block(0.2, 0.05, 0.1, 0.02), at(0.02, 0.2, 0), coat.pale);
+      put(block(0.03, 0.09, 0.1, 0.012), at(-0.165, 0.24, 0), coat.pale);
+      put(block(0.035, 0.05, 0.035, 0.01), at(-0.185, 0.3, 0, { rz: 0.5 }), coat.pale);
+      for (const [lx, lz, lean] of [
+        [0.125, 0.04, 0.05],
+        [0.125, -0.04, -0.06],
+        [-0.125, 0.04, -0.08],
+        [-0.125, -0.04, 0.06],
+      ]) {
+        put(cylinder(0.02, 0.011, 0.24, 5), at(lx, 0, lz, { rz: lean }), coat.dark);
+      }
+      if (!deer.stag) {
+        for (const [sx, sz] of [
+          [0.08, 0.03],
+          [-0.02, -0.03],
+          [-0.1, 0.025],
+          [0.02, 0.035],
+          [-0.07, -0.02],
+        ]) {
+          put(block(0.022, 0.008, 0.022, 0.003), at(sx, 0.346, sz), coat.pale);
+        }
+      }
+      // The neck swings from the shoulders, and the head tips on its end.
+      const body = new THREE.Group();
+      body.position.set(deer.x, 0, deer.z);
+      body.rotation.y = deer.ry;
+      body.scale.setScalar(deer.size);
+      const neck = new THREE.Group();
+      neck.position.set(0.14, 0.3, 0);
+      const head = new THREE.Group();
+      head.position.set(0, 0.2, 0);
+      head.add(
+        part(shapes.head, live.fur, 0.035, -0.02, 0),
+        part(shapes.snout, live.nose, 0.1, -0.012, 0),
+        part(shapes.ear, live.dark, -0.02, 0.055, 0.04, { rx: 0.5, scale: [0.014, 0.035, 0.02] }),
+        part(shapes.ear, live.dark, -0.02, 0.055, -0.04, { rx: -0.5, scale: [0.014, 0.035, 0.02] }),
+      );
+      if (deer.stag) {
+        for (const side of [-1, 1]) {
+          head.add(
+            part(shapes.tine, live.antler, 0, 0.04, side * 0.022, { rx: side * 0.45, rz: 0.25, scale: [1, 0.17, 1] }),
+            part(shapes.tine, live.antler, -0.03, 0.14, side * 0.085, { rx: side * 0.1, rz: -0.5, scale: [1, 0.1, 1] }),
+            part(shapes.tine, live.antler, -0.022, 0.1, side * 0.062, { rx: side * 0.9, rz: -0.9, scale: [1, 0.07, 1] }),
+          );
+        }
+      }
+      neck.add(part(shapes.neck, live.fur, 0, 0, 0), head);
+      body.add(neck);
+      body.traverse((child) => {
+        child.castShadow = child.isMesh === true;
+      });
+      keep(body);
+      const smooth = (a, b, v) => {
+        const k = Math.min(1, Math.max(0, (v - a) / (b - a)));
+        return k * k * (3 - 2 * k);
+      };
+      const move = (t) => {
+        if (deer.grazes) {
+          // Head down to the grass, lifted now and then to look about.
+          const u = (t * 0.085 + deer.phase) % 1;
+          const up = smooth(0, 0.07, u) * (1 - smooth(0.26, 0.34, u));
+          neck.rotation.z = -2.3 + up * 1.75 + Math.sin(t * 5.5) * 0.035 * (1 - up);
+          head.rotation.z = 0.95 - up * 0.55;
+          neck.rotation.y = Math.sin(t * 0.5 + deer.phase * 9) * 0.35 * up;
+        } else {
+          neck.rotation.z = -0.42 + Math.sin(t * 0.4) * 0.04;
+          neck.rotation.y = Math.sin(t * 0.21) * 0.55;
+          head.rotation.z = 0.4;
+        }
+      };
+      move(0);
+      movers.push(move);
+      await pause();
+    }
+  }
+
   // ---------- Koi ----------
+  section('koi');
   {
     const bodyGeometry = new THREE.SphereGeometry(1, 10, 6).scale(0.13, 0.035, 0.045);
     const tailGeometry = new THREE.ConeGeometry(0.045, 0.1, 4).rotateZ(Math.PI / 2).scale(1, 0.5, 1).translate(-0.05, 0, 0);
@@ -516,7 +933,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       tail.position.x = -0.12;
       fish.add(new THREE.Mesh(bodyGeometry, material), tail);
       fish.position.y = WATER - 0.1 - (i % 3) * 0.03;
-      group.add(fish);
+      keep(fish);
       const cx = TORII.x + between(-0.9, 0.9);
       const cz = 0.7 + between(-0.4, 0.5);
       const rx = between(0.7, 1.9);
@@ -536,6 +953,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   }
 
   // ---------- Lanterns afloat ----------
+  section('boats');
   {
     const paper = block(0.085, 0.085, 0.085, 0.012);
     const tray = block(0.12, 0.014, 0.12, 0.004);
@@ -560,7 +978,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       const below = glowSprite(C.warm, 0.5, 0.28);
       below.position.y = -0.1;
       boat.add(new THREE.Mesh(tray, trayMaterial), light, shine, below);
-      group.add(boat);
+      keep(boat);
       extra.push(shine.material, below.material);
       const phase = i * 1.7;
       movers.push((t) => {
@@ -573,6 +991,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
 
   // ---------- Ripples ----------
   // Rings spreading from the pillars and here and there on the pond.
+  section('ripples');
   {
     const ring = new THREE.RingGeometry(0.93, 1, 40).rotateX(-Math.PI / 2);
     extra.push(ring);
@@ -586,7 +1005,9 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       [-1.9, 1.5, 0.6, 0.8],
       [2.1, 2.0, 0.4, 3.1],
     ];
-    for (const [x, z, reach, offset] of sources) {
+    for (const [i, [x, z, reach, offset]] of sources.entries()) {
+      // The rings round the gate's feet go with the gate.
+      section(i < 4 ? 'torii' : 'ripples');
       const material = new THREE.MeshBasicMaterial({
         color: '#bcd8ff',
         transparent: true,
@@ -598,7 +1019,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       const mesh = new THREE.Mesh(ring, material);
       mesh.position.set(x, WATER + 0.004, z);
       mesh.renderOrder = 3;
-      group.add(mesh);
+      keep(mesh);
       movers.push((t) => {
         const f = ((t + offset) % 4.8) / 4.8;
         mesh.scale.setScalar(0.14 + f * reach);
@@ -609,6 +1030,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   }
 
   // ---------- Falling petals ----------
+  section('petals');
   {
     const count = 54;
     const geometry = new THREE.PlaneGeometry(0.045, 0.03);
@@ -616,7 +1038,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     const petals = new THREE.InstancedMesh(geometry, material, count);
     petals.frustumCulled = false;
     extra.push(geometry, material);
-    group.add(petals);
+    keep(petals);
     const dummy = new THREE.Object3D();
     const seeds = Array.from({ length: count }, (_, i) => {
       const [x, z, size] = cherries[i % cherries.length];
@@ -708,6 +1130,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   // ---------- Fireflies ----------
   // Small lights wandering over the pond and the shore, each blinking in its
   // own time. One draw, with the halos' material.
+  section('fireflies');
   {
     const count = 36;
     const flies = Array.from({ length: count }, () => {
@@ -733,7 +1156,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     const points = new THREE.Points(geometry, haloMaterial);
     points.frustumCulled = false;
     points.renderOrder = 5;
-    group.add(points);
+    keep(points);
     extra.push(geometry);
     const place = (t) => {
       flies.forEach((f, i) => {
@@ -758,6 +1181,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
 
   // ---------- Mist ----------
   // Low, wide wisps drifting across the water.
+  section('mist');
   {
     const wisps = [
       [-1.6, 0.9, 2.6, 0.0],
@@ -785,7 +1209,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
       );
       wisp.scale.set(width * 1.4, width * 0.36, 1);
       wisp.renderOrder = 6;
-      group.add(wisp);
+      keep(wisp);
       extra.push(wisp.material);
       const move = (t) => {
         wisp.position.set(x + Math.sin(t * 0.05 + phase) * 0.9, WATER + 0.16 + Math.sin(t * 0.21 + phase) * 0.03, z + Math.cos(t * 0.04 + phase) * 0.3);
@@ -800,6 +1224,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   // ---------- Birds ----------
   // A small flock circling high over the garden in a loose V. Each bird is
   // two triangles (its wings), all of them in one mesh moved every frame.
+  section('birds');
   {
     const flock = [
       [0, 0, 0],
@@ -814,7 +1239,7 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     const material = new THREE.MeshBasicMaterial({ color: '#efe9ff', side: THREE.DoubleSide, toneMapped: false });
     const birds = new THREE.Mesh(geometry, material);
     birds.frustumCulled = false;
-    group.add(birds);
+    keep(birds);
     extra.push(geometry, material);
     const WING = 0.15;
     const BODY = 0.075;
@@ -862,8 +1287,53 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   const statics = await batch.build(materials, { pause });
   group.add(statics);
 
+  // ---------- Switching parts on and off (the playground) ----------
+  const shown = new Map();
+  const isShown = (id) => shown.get(id) !== false && shown.get(NEEDS[id]) !== false;
+  const haloTints = haloGeometry.getAttribute('tint');
+  const apply = (id) => {
+    const visible = isShown(id);
+    for (const set of [statics, reflections]) {
+      for (const mesh of set.children) if (mesh.userData.part === id) mesh.visible = visible;
+    }
+    for (const object of owned.get(id) ?? []) object.visible = visible;
+    glows.forEach((entry, i) => {
+      if (entry[6] === id) haloTints.setW(i, visible ? entry[5] : 0);
+    });
+    haloTints.needsUpdate = true;
+  };
+  const raycaster = new THREE.Raycaster();
+
   return {
     group,
+    // Shows or hides a part, and whatever depends on it.
+    setVisible(id, on) {
+      shown.set(id, on);
+      apply(id);
+      for (const [other, needed] of Object.entries(NEEDS)) if (needed === id) apply(other);
+    },
+    // The part drawn at a point of the view (x and y from -1 to 1), if it's
+    // one that can be switched off. Only solid things count: not lights,
+    // mist or rings on the water.
+    pick(point, camera) {
+      raycaster.setFromCamera(point, camera);
+      const solid = [...statics.children];
+      for (const objects of owned.values()) {
+        for (const object of objects) if (!object.isSprite && !object.isPoints && object.userData.part !== 'ripples') solid.push(object);
+      }
+      for (const { object } of raycaster.intersectObjects(solid, true)) {
+        let node = object;
+        let visible = true;
+        let id;
+        for (; node && node !== group; node = node.parent) {
+          visible &&= node.visible;
+          id ??= node.userData.part;
+        }
+        if (!visible || object.material?.opacity === 0) continue;
+        return !id || id === 'base' ? null : id;
+      }
+      return null;
+    },
     // Pixels per world unit at distance 1, for the halos.
     setPixelScale(value) {
       haloMaterial.uniforms.uScale.value = value;

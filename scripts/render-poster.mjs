@@ -84,8 +84,8 @@ await browser.close();
 writeFileSync('public/hero-poster.webp', Buffer.from(result.large.data, 'base64'));
 writeFileSync('public/hero-poster-640.webp', Buffer.from(result.small.data, 'base64'));
 console.log(`Wrote public/hero-poster.webp (960 × ${result.large.height}) and hero-poster-640.webp.`);
-// Hero.css sizes the poster for a 661 px wide crop at this viewport.
-console.log(`The garden is ${result.width} px wide at 1440 × 900 (it was 661).`);
+// Hero.css sizes the poster for a 677 px wide crop at this viewport.
+console.log(`The garden is ${result.width} px wide at 1440 × 900 (it was 677).`);
 console.log(
   'If that changed, scale the poster width in Hero.css by the same factor, and update its height in Hero.jsx.',
 );

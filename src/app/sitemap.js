@@ -9,7 +9,7 @@ export default async function sitemap() {
   const site = siteUrl();
   const articles = await getSiteArticles();
   return [
-    ...['/', '/work', '/insights'].map((path) => ({ url: `${site}${path}` })),
+    ...['/', '/work', '/insights', '/playground'].map((path) => ({ url: `${site}${path}` })),
     ...articles.map((article) => ({ url: `${site}${articlePath(article.slug)}`, lastModified: article.date })),
   ];
 }

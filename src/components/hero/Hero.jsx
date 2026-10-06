@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import ErrorBoundary from '../ErrorBoundary';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
@@ -75,6 +76,10 @@ export default function Hero() {
   const [webgl, setWebgl] = useState(false);
   const posterRef = useRef(null);
   const onSceneReady = useCallback(() => setArtReady(true), []);
+  // Holding the garden opens the playground, where its parts can be switched off.
+  const router = useRouter();
+  const openPlayground = useCallback(() => router.push('/playground'), [router]);
+  const warmPlayground = useCallback(() => router.prefetch('/playground'), [router]);
 
   useEffect(() => {
     if (navigator.connection?.saveData) return undefined; // The poster stays.
@@ -91,8 +96,6 @@ export default function Hero() {
     };
     const q = (selector) => [...root.querySelectorAll(selector)];
     const slideEls = q('.hero__slide');
-    const titles = q('.hero__title');
-    const ctas = q('.hero__cta');
     const [slidesEl] = q('.hero__slides');
     const [progress] = q('.hero__progress-fill');
     const fills = q('.hero-tab__fill');
@@ -149,9 +152,9 @@ export default function Hero() {
     // Moves `is-active` (and with it visibility) to the next slide at once.
     const show = (next) => flushSync(() => setActive(next));
 
-    // The headline leaves left and the next one sweeps in from the right.
-    // Transform and opacity only, so the browser runs them on the compositor
-    // and a busy page can't make them stutter. The 3D garden stays as it is.
+    // The headline fades out and the next one fades in: opacity only, so the
+    // browser runs it on the compositor and a busy page can't make it
+    // stutter. The 3D garden stays as it is.
     async function go(next) {
       if (n < 2 || next === current) return;
       if (busy) {
@@ -161,38 +164,14 @@ export default function Hero() {
       busy = true;
       rewind();
       const prev = current;
-      const vw = window.innerWidth;
-
-      if (reduced) {
-        await settled([slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' })]);
-        if (!alive) return;
-        show(next);
-        current = next; // What the tab bar shows is what picks and swipes count from.
-        slideEls[prev].getAnimations().forEach((a) => a.cancel());
-        await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE })]);
-      } else {
-        const leave = [{ transform: 'translateX(0)' }, { transform: `translateX(${-vw}px)` }];
-        const out = [
-          titles[prev].animate(leave, { duration: 800, easing: EASE, fill: 'both' }),
-          ctas[prev].animate(leave, { duration: 600, easing: EASE, fill: 'both' }),
-        ];
-        await settled(out);
-        if (!alive) return;
-        show(next);
-        current = next;
-        out.forEach((a) => a.cancel()); // Back in place, hidden.
-        const sweep = [
-          { transform: `translateX(${vw * 0.55}px)`, opacity: 0 },
-          { transform: 'translateX(0)', opacity: 1 },
-        ];
-        const into = [
-          titles[next].animate(sweep, { duration: 950, easing: EASE, fill: 'both' }),
-          ctas[next].animate(sweep, { duration: 950, delay: 80, easing: EASE, fill: 'both' }),
-        ];
-        await settled(into);
-        if (!alive) return;
-        into.forEach((a) => a.cancel()); // Where it ended is where it rests.
-      }
+      const out = slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' });
+      await settled([out]);
+      if (!alive) return;
+      show(next);
+      current = next; // What the tab bar shows is what picks and swipes count from.
+      out.cancel(); // Hidden now; back to full for its next turn.
+      await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, easing: EASE })]);
+      if (!alive) return;
 
       busy = false;
       const target = queued;
@@ -401,13 +380,19 @@ export default function Hero() {
             sizes={POSTER_SIZES}
             alt=""
             width="960"
-            height="790"
+            height="805"
             fetchPriority="high"
           />
           {webgl && (
             <ErrorBoundary>
               <Suspense fallback={null}>
-                <HeroScene apiRef={sceneApi} playingRef={playingRef} onReady={onSceneReady} />
+                <HeroScene
+                  apiRef={sceneApi}
+                  playingRef={playingRef}
+                  onReady={onSceneReady}
+                  onHold={openPlayground}
+                  onHoldStart={warmPlayground}
+                />
               </Suspense>
             </ErrorBoundary>
           )}

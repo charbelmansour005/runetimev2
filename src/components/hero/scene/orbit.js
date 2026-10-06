@@ -20,7 +20,9 @@ const GESTURE_GAP = 180;
 
 const clamp = THREE.MathUtils.clamp;
 
-export function createOrbit({ element, camera, reduced, onInput }) {
+// With `captureWheel` (a page that is all garden), the wheel always zooms and
+// touch drags tilt as well as turn.
+export function createOrbit({ element, camera, reduced, onInput, captureWheel = false }) {
   const state = { ...HOME };
   const goal = { ...HOME };
   let spin = 0; // degrees per second, after a flick
@@ -64,7 +66,7 @@ export function createOrbit({ element, camera, reduced, onInput }) {
   let zoomedAt = -Infinity;
   const onWheel = (e) => {
     const zoomingOut = e.deltaY > 0;
-    if (!e.ctrlKey) {
+    if (!e.ctrlKey && !captureWheel) {
       if (window.scrollY > 4) return; // the page is scrolling: let it
       if (zoomingOut && goal.zoom >= ZOOM[1] - 0.001) {
         // Fully out: scroll the page. The tail of the turn that zoomed out
@@ -113,7 +115,7 @@ export function createOrbit({ element, camera, reduced, onInput }) {
     } else if (pointers.size === 1) {
       goal.az -= dx * 0.3;
       // Touch drags only turn it: up and down scroll the page.
-      if (p.type !== 'touch') goal.el = clamp(goal.el + dy * 0.2, ...EL);
+      if (p.type !== 'touch' || captureWheel) goal.el = clamp(goal.el + dy * 0.2, ...EL);
       const dt = Math.max(e.timeStamp - last.t, 1);
       last = { x: e.clientX, t: e.timeStamp, v: last.v * 0.6 + ((-dx * 0.3) / dt) * 1000 * 0.4 };
     }
@@ -164,11 +166,13 @@ export function createOrbit({ element, camera, reduced, onInput }) {
   element.addEventListener('pointermove', onMove);
   element.addEventListener('pointerup', onUp);
   element.addEventListener('pointercancel', onUp);
-  element.addEventListener('dblclick', onDoubleClick);
+  // (Where taps do something of their own, a double tap mustn't also reset.)
+  if (!captureWheel) element.addEventListener('dblclick', onDoubleClick);
 
   return {
     state,
     onKey,
+    home: onDoubleClick,
     // Eases the view towards where it's been sent; true while still moving.
     step(dt) {
       if (spin) {
