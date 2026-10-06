@@ -28,7 +28,7 @@ await page.goto(url, { waitUntil: 'networkidle2' });
 await page.waitForSelector('.hero-scene.is-ready', { timeout: 20000 });
 await page.addStyleTag({
   content: `html, body, .hero { background: transparent !important; }
-    .hero__bg, .hero__glow, .hero__content, .hero__tabbar, .hero__progress, header,
+    .hero__bg, .hero__texture, .hero__glow, .hero__content, .hero__tabbar, .hero__progress, header,
     .hero__poster, .hero-scene__hint, .skip-link { visibility: hidden !important; }`,
 });
 await new Promise((resolve) => setTimeout(resolve, 500));

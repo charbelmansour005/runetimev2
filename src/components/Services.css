@@ -5,9 +5,42 @@
 }
 
 .service-card {
+  position: relative;
+  isolation: isolate;
   padding: 24px 22px 30px;
   border-radius: var(--radius-card);
   background: var(--white);
+}
+
+/* Hover: the card lifts and its edge tints. The lift uses `translate`, so it doesn't
+   fight the scroll-in reveal's transform or wait for its delay. */
+.service-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid rgba(77, 0, 242, 0.28);
+  border-radius: inherit;
+  box-shadow: 0 22px 44px -18px rgba(40, 1, 124, 0.35);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+@media (hover: hover) {
+  .service-card {
+    transition:
+      opacity 0.5s var(--ease-out-3) var(--reveal-delay, 0ms),
+      transform 0.5s var(--ease-out-3) var(--reveal-delay, 0ms),
+      translate 0.4s var(--ease-out-3);
+  }
+
+  .service-card:hover {
+    translate: 0 -6px;
+  }
+
+  .service-card:hover::before {
+    opacity: 1;
+  }
 }
 
 .service-card__icon {

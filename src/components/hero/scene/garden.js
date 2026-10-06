@@ -28,6 +28,7 @@ const C = {
   pad: '#3f8a62',
   lotus: '#ffc4dc',
   warm: '#ffd9a0',
+  dusk: '#8b6bff',
   paper: '#ffcf8a',
   deep: '#081428',
   wood: '#5a3b33',
@@ -300,6 +301,14 @@ export async function buildGarden({ pause = async () => {} } = {}) {
     // The name tablet between the beams.
     put('solid', block(0.26, 0.34, 0.07, 0.015), at(0, 1.63, 0), C.roof);
     for (const z of [-0.04, 0.04]) put('glow', block(0.18, 0.26, 0.012, 0.004), at(0, 1.67, z), C.gold);
+    // The gate glows a little in the dusk, and so does the water at its feet.
+    glows.push([TORII.x, 1.3 * TORII.s, TORII.z, 2.3 * TORII.s, C.vermilion, 0.22]);
+    glow(TORII.x, 1.67 * TORII.s, TORII.z, 0.9, C.gold, 0.4);
+    for (const side of [-1, 1]) {
+      const foot = new THREE.Vector3(side * 1.15, 0, 0).applyMatrix4(T);
+      glows.push([foot.x, WATER + 0.03, foot.z, 1.5, C.vermilion, 0.22]);
+    }
+    glows.push([TORII.x, WATER + 0.03, TORII.z + 1.5, 2.6, C.dusk, 0.2]);
   }
 
   await pause();
@@ -689,6 +698,159 @@ export async function buildGarden({ pause = async () => {} } = {}) {
   halos.renderOrder = 4;
   group.add(halos);
   extra.push(haloGeometry, haloMaterial);
+  await pause();
+
+  // The living things below draw their numbers from their own sequence, so
+  // adding to them never moves a tree or a rock.
+  const life = seeded(23);
+  const span = (min, max) => min + life() * (max - min);
+
+  // ---------- Fireflies ----------
+  // Small lights wandering over the pond and the shore, each blinking in its
+  // own time. One draw, with the halos' material.
+  {
+    const count = 36;
+    const flies = Array.from({ length: count }, () => {
+      const angle = life() * Math.PI * 2;
+      const reach = Math.sqrt(life());
+      return {
+        x: 0.2 + Math.cos(angle) * reach * 3.6,
+        y: span(0.2, 1.2),
+        z: Math.sin(angle) * reach * 2.8,
+        wander: span(0.18, 0.42),
+        pace: span(0.25, 0.6),
+        blink: span(0.7, 1.6),
+        phase: life() * 40,
+      };
+    });
+    const positions = new THREE.Float32BufferAttribute(new Float32Array(count * 3), 3);
+    const tints = new THREE.Float32BufferAttribute(new Float32Array(count * 4), 4);
+    const tint = color('#e6ff9a');
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', positions);
+    geometry.setAttribute('size', new THREE.Float32BufferAttribute(flies.map(() => span(0.26, 0.4)), 1));
+    geometry.setAttribute('tint', tints);
+    const points = new THREE.Points(geometry, haloMaterial);
+    points.frustumCulled = false;
+    points.renderOrder = 5;
+    group.add(points);
+    extra.push(geometry);
+    const place = (t) => {
+      flies.forEach((f, i) => {
+        const a = t * f.pace + f.phase;
+        positions.setXYZ(
+          i,
+          f.x + Math.sin(a) * f.wander + Math.sin(a * 0.37) * f.wander,
+          f.y + Math.sin(a * 1.3) * 0.12,
+          f.z + Math.cos(a * 0.8) * f.wander + Math.cos(a * 0.29) * f.wander,
+        );
+        // Lit for about half of each blink, fading in and out.
+        const lit = Math.max(0, Math.sin(t * f.blink + f.phase));
+        tints.setXYZW(i, tint.r, tint.g, tint.b, lit * lit * 0.9);
+      });
+      positions.needsUpdate = true;
+      tints.needsUpdate = true;
+    };
+    place(0);
+    movers.push(place);
+  }
+  await pause();
+
+  // ---------- Mist ----------
+  // Low, wide wisps drifting across the water.
+  {
+    const wisps = [
+      [-1.6, 0.9, 2.6, 0.0],
+      [1.4, 1.7, 3.0, 2.1],
+      [0.4, -0.6, 2.4, 4.4],
+      [2.3, 0.3, 2.2, 1.2],
+      [-0.6, 2.2, 2.8, 3.3],
+    ];
+    // Softer than the lights' halo: no bright middle.
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const fade = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    fade.addColorStop(0, 'rgba(255,255,255,0.55)');
+    fade.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+    fade.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, 0, 64, 64);
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    extra.push(map);
+    for (const [x, z, width, phase] of wisps) {
+      const wisp = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map, color: '#cfc6ff', transparent: true, opacity: 0, depthWrite: false, toneMapped: false }),
+      );
+      wisp.scale.set(width * 1.4, width * 0.36, 1);
+      wisp.renderOrder = 6;
+      group.add(wisp);
+      extra.push(wisp.material);
+      const move = (t) => {
+        wisp.position.set(x + Math.sin(t * 0.05 + phase) * 0.9, WATER + 0.16 + Math.sin(t * 0.21 + phase) * 0.03, z + Math.cos(t * 0.04 + phase) * 0.3);
+        wisp.material.opacity = 1.15 + Math.sin(t * 0.13 + phase * 2) * 0.35;
+      };
+      move(0);
+      movers.push(move);
+    }
+  }
+  await pause();
+
+  // ---------- Birds ----------
+  // A small flock circling high over the garden in a loose V. Each bird is
+  // two triangles (its wings), all of them in one mesh moved every frame.
+  {
+    const flock = [
+      [0, 0, 0],
+      [-0.22, 0.16, 0.04],
+      [-0.22, -0.16, -0.03],
+      [-0.45, 0.33, 0.07],
+      [-0.47, -0.31, 0.02],
+    ].map(([back, side, lift], i) => ({ back, side, lift, phase: i * 1.9, beat: span(5.2, 6.4) }));
+    const positions = new THREE.Float32BufferAttribute(new Float32Array(flock.length * 18), 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', positions);
+    const material = new THREE.MeshBasicMaterial({ color: '#efe9ff', side: THREE.DoubleSide, toneMapped: false });
+    const birds = new THREE.Mesh(geometry, material);
+    birds.frustumCulled = false;
+    group.add(birds);
+    extra.push(geometry, material);
+    const WING = 0.15;
+    const BODY = 0.075;
+    const place = (t) => {
+      // Round an oval, 40 seconds a lap, starting over the back of the garden.
+      const a = t * 0.157 + 2.2;
+      const cx = 0.3 + Math.cos(a) * 3.1;
+      const cz = Math.sin(a) * 2.2;
+      const cy = 2.55 + Math.sin(t * 0.3) * 0.12;
+      // Heading (along the path) and the level direction across it.
+      let hx = -Math.sin(a) * 3.1;
+      let hz = Math.cos(a) * 2.2;
+      const length = Math.hypot(hx, hz);
+      hx /= length;
+      hz /= length;
+      const rx = hz;
+      const rz = -hx;
+      flock.forEach((bird, i) => {
+        const x = cx + hx * bird.back + rx * bird.side;
+        const y = cy + bird.lift + Math.sin(t * 0.8 + bird.phase) * 0.02;
+        const z = cz + hz * bird.back + rz * bird.side;
+        const flap = Math.sin(t * bird.beat + bird.phase) * 0.75;
+        const out = Math.cos(flap) * WING;
+        const up = Math.sin(flap) * WING;
+        const o = i * 6;
+        for (const [k, side] of [-1, 1].entries()) {
+          positions.setXYZ(o + k * 3, x + hx * BODY, y, z + hz * BODY);
+          positions.setXYZ(o + k * 3 + 1, x - hx * BODY, y, z - hz * BODY);
+          positions.setXYZ(o + k * 3 + 2, x - hx * BODY * 0.4 + rx * out * side, y + up, z - hz * BODY * 0.4 + rz * out * side);
+        }
+      });
+      positions.needsUpdate = true;
+    };
+    place(0);
+    movers.push(place);
+  }
   await pause();
 
   const reflections = await mirror.build({ mirror: mirrorMaterial }, { castShadow: false, receiveShadow: false, pause });

@@ -227,8 +227,10 @@ export default function Hero() {
     listen(root, 'focusout', (e) => !root.contains(e.relatedTarget) && holdFocus(false));
 
     if (!reduced) {
-      // Scroll parallax: the garden lags behind as the hero leaves.
+      // Scroll parallax: the garden lags behind as the hero leaves, and the
+      // backdrop behind it lags a little less, so the two separate.
       const [parallax] = q('.hero__sculpture');
+      const [backdrop] = q('.hero__texture');
       let ticking = false;
       listen(
         window,
@@ -240,6 +242,7 @@ export default function Hero() {
             ticking = false;
             const passed = Math.min(1, Math.max(0, window.scrollY / (root.offsetHeight || 1)));
             parallax.style.transform = `translateY(${14 * passed}%)`;
+            backdrop.style.transform = `translateY(${5 * passed}%)`;
           });
         },
         { passive: true },
@@ -302,6 +305,7 @@ export default function Hero() {
         {brand.name}: {brand.tagline}
       </h1>
       <div className="hero__bg" aria-hidden="true" />
+      <div className="hero__texture" aria-hidden="true" />
       <div className="hero__progress" aria-hidden="true">
         <span className="hero__progress-fill" />
       </div>
@@ -326,6 +330,7 @@ export default function Hero() {
                 ))}
               </h2>
               <a className="btn btn--primary hero__cta" href="#contact" tabIndex={i === active ? 0 : -1}>
+                <span className="hero__cta-dot" aria-hidden="true" />
                 Get in touch
               </a>
             </div>
