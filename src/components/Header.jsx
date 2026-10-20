@@ -226,6 +226,8 @@ export default function Header() {
 
   return (
     <header className={`header${solid ? ' is-scrolled' : ''}${menuOpen ? ' is-menu-open' : ''}`}>
+      {/* How far down the page the visitor is (drawn by the browser as it scrolls). */}
+      <span className="scroll-progress" aria-hidden="true" />
       <div className="header__inner container">
         <a href="/#top" className="header__logo">
           <Logo tone={solid ? 'dark' : 'light'} />

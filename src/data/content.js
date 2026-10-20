@@ -275,6 +275,16 @@ export const defaultContent = {
     intro: 'Notes from the collective on engineering, AI and shipping products that last.',
     items: [
       {
+        title: 'A live 3D garden, and 98–100 on mobile Lighthouse',
+        slug: '3d-hero-fast-on-phones',
+        date: '2026-10-07',
+        tag: 'Performance',
+        summary:
+          'Our home page opens on a 3D scene visitors can turn, zoom and rearrange, and still scores 98–100 on a phone. The six changes that got it there from 87, and two that did nothing.',
+        url: '',
+        art: { from: '#1A1033', to: '#B5300F', glow: '#FFD9A0', glyph: 'spark' },
+      },
+      {
         title: 'How a rotating headline pushed our LCP to 12.8 seconds',
         slug: 'rotating-hero-lcp',
         date: '2026-10-01',

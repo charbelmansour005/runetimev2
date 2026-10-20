@@ -1,3 +1,4 @@
+import LitText from './LitText';
 import Reveal from './Reveal';
 import CodeWindow from './visuals/CodeWindow';
 import { useContent } from '../content/ContentProvider';
@@ -11,7 +12,7 @@ export default function About() {
       <div className="container about__grid">
         <Reveal className="about__copy">
           <h2 className="section-title" id="about-title">
-            {about.title}
+            <LitText text={about.title} />
           </h2>
           {about.paragraphs.map((paragraph, i) => (
             <p key={i}>

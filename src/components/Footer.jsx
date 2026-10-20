@@ -1,3 +1,4 @@
+import ClutchBadge from './ClutchBadge';
 import Logo from './Logo';
 import PageLink from './PageLink';
 import { SocialIcon } from './Icons';
@@ -26,6 +27,9 @@ export default function Footer() {
           <div className="footer__top">
             <Logo />
             <p>{brand.tagline}</p>
+            <div className="footer__clutch">
+              <ClutchBadge />
+            </div>
           </div>
           <nav className="footer__grid" aria-label="Footer">
             {columns.map((col) => (

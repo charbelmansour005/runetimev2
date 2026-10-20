@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import LitText from './LitText';
 import Reveal from './Reveal';
 import { Check } from './Icons';
 import { useContent } from '../content/ContentProvider';
@@ -93,7 +94,9 @@ export default function Contact() {
       <div className="container">
         <Reveal className="contact-card">
           <div className="contact-card__copy">
-            <h2 id="contact-title">{contact.title}</h2>
+            <h2 id="contact-title">
+              <LitText text={contact.title} />
+            </h2>
             <p>{contact.text}</p>
             <p className="contact-card__alt">
               Prefer email?{' '}

@@ -20,6 +20,13 @@
   font-size: 14px;
 }
 
+/* Clutch's badge: its iframe sizes itself; this keeps room for it so the
+   footer doesn't jump when it arrives. */
+.footer__clutch {
+  min-width: 200px;
+  min-height: 45px;
+}
+
 .footer__grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

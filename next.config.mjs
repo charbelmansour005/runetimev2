@@ -13,9 +13,11 @@ const csp = [
   "font-src 'self' data:",
   "form-action 'self'",
   "frame-ancestors 'none'",
+  // Clutch's rating badge, in the footer: their script and its iframe.
+  "frame-src https://widget.clutch.co",
   "img-src 'self' data: blob:",
   "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''}`,
+  `script-src 'self' 'unsafe-inline' https://widget.clutch.co${dev ? " 'unsafe-eval'" : ''}`,
   "script-src-attr 'none'",
   "style-src 'self' 'unsafe-inline'",
   `connect-src 'self'${dev ? ' ws:' : ''}`,
