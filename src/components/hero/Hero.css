@@ -325,12 +325,14 @@
   justify-self: center;
 }
 
-/* A soft dark wash behind the title, so it reads over the garden. */
-.hero__slides {
+/* A soft dark wash behind each title, so it reads over the garden. It's
+   part of the title, so it leaves with it and the garden shows at full
+   brightness between titles. */
+.hero__slide {
   position: relative;
 }
 
-.hero__slides::before {
+.hero__slide::before {
   content: '';
   position: absolute;
   inset: -18% -6%;
