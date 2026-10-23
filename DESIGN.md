@@ -163,9 +163,24 @@ lavender, ice, aqua.
   until the first WebGL frame and lines up with it; it stays without WebGL or with Data Saver on.
   three.js starts loading only once the page has loaded and settled: on desktops when the browser is
   idle, on phones at the first touch or scroll (or 4 s after load), so a short visit never pays for it.
-- The headline slideshow is a plain crossfade (Web Animations API, opacity only), so it runs on the
-  compositor and stays smooth while the page is busy. The first headline arrives with the page and
-  stays put; later slides fade in.
+- The hero is a **scroll story** with no camera moves: the section is several screens tall and its
+  stage stays pinned while the visitor scrolls. It opens on the bare plate and pond with the first
+  title centred over it; scrolling builds the garden in stages (torii; rocks and lilies; bridge and
+  pagoda; trees; mountain, waterfall and bamboo; lanterns; deer and koi; the living touches), each
+  piece dropping in and settling with a small bounce, its reflection and shadow following. The next
+  title shows in each pause between stages; the last over the finished garden. The tab bar shows the
+  titles and scrolls to one when clicked. The poster is the bare plate (the whole garden with reduced
+  motion, Data Saver or no WebGL), rendered with the same crop as the scene. With reduced motion
+  there's no pin: the whole garden, and the tabs cross-fade the titles.
+- **Services** turn on a 3D ring while the section is pinned, with a list beside it that follows and
+  jumps; **Selected Work** is a stack of sticky project cards, each shrinking back as the next slides
+  over. Both are plain layouts with reduced motion. Pin lengths are set in CSS (so links to a section
+  land right before the scripts run) and are shorter on phones; one scroll listener drives all three
+  (`src/scrollStage.js`).
+- **The Collective in Numbers** pins too, and gives each stat the stage in turn: a huge outlined number
+  that fills as it counts with the scroll, over a picture of its own value (`visuals/StatVisual.jsx`: a
+  ring that closes to a percentage, a field of 1,000 dots for a large count, figures for a small one).
+  Nothing in the pictures is invented; they only draw the stat itself.
 
 - **Playground** (`/playground`): holding the garden still for a second (a ring fills at the pointer;
   `E` from the keyboard) opens a page that is all garden, to make your own. Every part has a switch;

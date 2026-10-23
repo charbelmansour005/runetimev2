@@ -4,21 +4,43 @@ import { useRouter } from 'next/navigation';
 import ErrorBoundary from '../ErrorBoundary';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
-import { POSTER_SIZES, POSTER_SRCSET } from './poster';
+import { clamp, onScrollFrame, pinProgress, scrollToProgress, smooth } from '../../scrollStage';
+import { BARE_POSTER_SRCSET, POSTER_SIZES, POSTER_SRCSET } from './poster';
 import './Hero.css';
 
 // three.js is heavy, so the WebGL layer starts loading only once the page has
 // loaded and settled (see startWebGL).
 const HeroScene = lazy(() => import('./HeroScene'));
 
-const SLIDE_SECONDS = 8;
 // The same curves as the CSS tokens --ease-in-out-2 and --ease-out-3.
 const EASE = 'cubic-bezier(0.45, 0, 0.55, 1)';
-const EASE_OUT = 'cubic-bezier(0.33, 1, 0.68, 1)';
 
 // Resolves when the animation has finished or been cancelled (`finished`
 // rejects on cancel, which here is never an error).
 const settled = (animations) => Promise.all(animations.map((a) => a.finished.catch(() => {})));
+
+// The hero's scroll story: each title holds the stage for a while, and
+// between titles the garden is built a little further (garden.js decides
+// what arrives when). Returns how much each title shows, and how far the
+// garden is built (0–1).
+const HOLD = 1;
+const GAP = 1.5;
+function storyAt(p, n) {
+  const total = n * HOLD + (n - 1) * GAP;
+  const u = clamp(p / 0.96) * total;
+  const titles = Array.from({ length: n }, (_, i) => {
+    const start = i * (HOLD + GAP);
+    const into = i === 0 ? 1 : smooth((u - start) / (HOLD * 0.3));
+    const out = i === n - 1 ? 0 : smooth((u - (start + HOLD * 0.7)) / (HOLD * 0.3));
+    return { o: into * (1 - out), into, out, fill: clamp((u - start) / (HOLD + GAP)) };
+  });
+  let built = 0;
+  for (let i = 0; i < n - 1; i += 1) {
+    const from = i * (HOLD + GAP) + HOLD;
+    built += clamp((u - from) / GAP) / (n - 1);
+  }
+  return { titles, built };
+}
 
 // When to start the 3D scene: the headline, the poster and the rest of the
 // page come first. Phones wait for the visitor's first touch or scroll (or a
@@ -74,15 +96,36 @@ export default function Hero() {
   const [playing, setPlaying] = useState(true);
   const [artReady, setArtReady] = useState(false);
   const [webgl, setWebgl] = useState(false);
+  // The whole garden's poster instead of the bare plate: one slide (no
+  // story), Data Saver, or no WebGL to build it with.
+  const [whole, setWhole] = useState(slides.length < 2);
+  const onSceneFail = useCallback(() => setWhole(true), []);
   const posterRef = useRef(null);
-  const onSceneReady = useCallback(() => setArtReady(true), []);
+  // Re-runs the story's update, so a scene that has just appeared is pointed
+  // where the scroll says.
+  const aimRef = useRef(null);
+  // How far the story has built the garden, for a scene that's just loaded.
+  const buildRef = useRef(null);
+  // (`?poster=bare` shows the bare plate even with reduced motion: that's
+  // how scripts/render-poster.mjs draws the story's poster.)
+  const buildAt = useCallback(() => {
+    if (new URLSearchParams(window.location.search).get('poster') === 'bare') return 0;
+    return buildRef.current?.() ?? 1;
+  }, []);
+  const onSceneReady = useCallback(() => {
+    setArtReady(true);
+    aimRef.current?.();
+  }, []);
   // Holding the garden opens the playground, where its parts can be switched off.
   const router = useRouter();
   const openPlayground = useCallback(() => router.push('/playground'), [router]);
   const warmPlayground = useCallback(() => router.prefetch('/playground'), [router]);
 
   useEffect(() => {
-    if (navigator.connection?.saveData) return undefined; // The poster stays.
+    if (navigator.connection?.saveData) {
+      setWhole(true);
+      return undefined; // The poster stays.
+    }
     return startWebGL(posterRef.current, () => setWebgl(true));
   }, []);
 
@@ -90,175 +133,96 @@ export default function Hero() {
     const root = rootRef.current;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const cleanups = [];
-    const listen = (el, type, fn, opts) => {
-      el.addEventListener(type, fn, opts);
-      cleanups.push(() => el.removeEventListener(type, fn, opts));
-    };
     const q = (selector) => [...root.querySelectorAll(selector)];
     const slideEls = q('.hero__slide');
-    const [slidesEl] = q('.hero__slides');
     const [progress] = q('.hero__progress-fill');
     const fills = q('.hero-tab__fill');
     const n = slides.length;
-
     let alive = true;
     let current = 0;
-    let busy = false;
-    let queued = null;
-    let progressAnims = [];
 
-    // Rotation stops while the visitor reads (hovering the copy or the tabs,
-    // or keyboard focus inside the hero) and whenever they press pause.
-    // It starts paused when they've asked for reduced motion.
-    const hold = { user: reduced, hover: false, focus: false };
-    const sync = () => {
-      const held = hold.user || hold.hover || hold.focus;
-      for (const a of progressAnims) {
-        if (held) a.pause();
-        else if (a.playState === 'paused') a.play();
-      }
-      slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
-      // Pausing stops the 3D garden as well; hovering only holds the slide.
-      playingRef.current = !hold.user;
-      sceneApi.current?.setPlaying(!hold.user);
+    // The pause button stops the garden's own animation (the slides follow
+    // the scroll, so they have nothing to pause). Reduced motion starts it paused.
+    const sync = (play) => {
+      playingRef.current = play;
+      sceneApi.current?.setPlaying(play);
     };
-    setPlaying(!hold.user);
+    setPlaying(!reduced);
+    sync(!reduced);
 
-    // The bars fill over the slide's time; when they're full, the next slide.
-    const schedule = (i) => {
-      progressAnims = [progress, fills[i]].map((el) =>
-        el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], {
-          duration: SLIDE_SECONDS * 1000,
-          easing: 'linear',
-          fill: 'both',
-        }),
-      );
-      const [bar] = progressAnims;
-      bar.finished.then(() => alive && bar === progressAnims[0] && go((i + 1) % n)).catch(() => {});
-      sync();
+    // Moves `is-active` (and with it focus order and what screen readers
+    // read) to another slide at once.
+    const show = (next) => {
+      if (next === current) return;
+      current = next;
+      flushSync(() => setActive(next));
     };
 
-    // Empties the bars quickly, from wherever they are, before a change.
-    const rewind = () => {
-      for (const a of progressAnims) {
-        const el = a.effect.target;
-        const from = getComputedStyle(el).transform;
-        a.cancel();
-        el.animate([{ transform: from }, { transform: 'scaleX(0)' }], { duration: 350, easing: EASE_OUT }).finished.catch(() => {});
-      }
-      progressAnims = [];
-    };
-
-    // Moves `is-active` (and with it visibility) to the next slide at once.
-    const show = (next) => flushSync(() => setActive(next));
-
-    // The headline fades out and the next one fades in: opacity only, so the
-    // browser runs it on the compositor and a busy page can't make it
-    // stutter. The 3D garden stays as it is.
-    async function go(next) {
-      if (n < 2 || next === current) return;
-      if (busy) {
-        queued = next; // Picked mid-transition: show it right after.
-        return;
-      }
-      busy = true;
-      rewind();
-      const prev = current;
-      const out = slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' });
-      await settled([out]);
-      if (!alive) return;
-      show(next);
-      current = next; // What the tab bar shows is what picks and swipes count from.
-      out.cancel(); // Hidden now; back to full for its next turn.
-      await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, easing: EASE })]);
-      if (!alive) return;
-
-      busy = false;
-      const target = queued;
-      queued = null;
-      if (target !== null && target !== next) go(target);
-      else schedule(next);
+    // The story: the hero is pinned for a few screens, and scrolling through
+    // it moves from one headline to the next while the camera flies round the
+    // garden. Without it (reduced motion, or one slide), the tabs cross-fade.
+    const story = !reduced && n > 1;
+    let go;
+    if (story) {
+      const update = () => {
+        const p = pinProgress(root);
+        const { titles, built } = storyAt(p, n);
+        slideEls.forEach((el, i) => {
+          const { o, into, out } = titles[i];
+          el.style.opacity = o;
+          el.style.visibility = o > 0.002 ? 'visible' : 'hidden';
+          el.style.transform = `translate3d(0, ${(1 - into) * 40 - out * 40}px, 0) scale(${0.97 + 0.03 * o})`;
+        });
+        // The tabs (and screen readers) follow the title the story is on.
+        let on = 0;
+        titles.forEach((t, i) => {
+          if (t.fill > 0) on = i;
+        });
+        show(on);
+        progress.style.transform = `scaleX(${p})`;
+        fills.forEach((el, i) => {
+          el.style.transform = `scaleX(${titles[i].fill})`;
+        });
+        sceneApi.current?.build?.(built);
+      };
+      cleanups.push(onScrollFrame(update));
+      // The scene may arrive later: point it straight away when it does.
+      aimRef.current = update;
+      // A tab scrolls to where its title is fully in view.
+      go = (next) => {
+        const total = n * HOLD + (n - 1) * GAP;
+        scrollToProgress(root, ((next * (HOLD + GAP) + HOLD * 0.45) / total) * 0.96);
+      };
+      buildRef.current = () => storyAt(pinProgress(root), n).built;
+    } else {
+      // Cross-fade, opacity only.
+      let busy = false;
+      go = async (next) => {
+        if (n < 2 || next === current || busy) return;
+        busy = true;
+        const prev = current;
+        const out = slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' });
+        await settled([out]);
+        if (!alive) return;
+        show(next);
+        out.cancel();
+        await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE })]);
+        busy = false;
+      };
     }
 
     controls.current = {
       go,
       setPlaying: (play) => {
-        hold.user = !play;
         setPlaying(play);
-        sync();
+        sync(play);
       },
     };
-
-    const holdHover = (value) => {
-      hold.hover = value;
-      sync();
-    };
-    const holdFocus = (value) => {
-      hold.focus = value;
-      sync();
-    };
-    q('.hero__slides, .hero__tabbar').forEach((el) => {
-      listen(el, 'pointerenter', (e) => e.pointerType === 'mouse' && holdHover(true));
-      listen(el, 'pointerleave', (e) => e.pointerType === 'mouse' && holdHover(false));
-    });
-    // Only keyboard focus holds the slide; a mouse click on a tab shouldn't.
-    listen(root, 'focusin', (e) => e.target.matches(':focus-visible') && holdFocus(true));
-    listen(root, 'focusout', (e) => !root.contains(e.relatedTarget) && holdFocus(false));
-
-    if (!reduced) {
-      // Scroll parallax: the garden lags behind as the hero leaves, and the
-      // backdrop behind it lags a little less, so the two separate.
-      const [parallax] = q('.hero__sculpture');
-      const [backdrop] = q('.hero__texture');
-      let ticking = false;
-      listen(
-        window,
-        'scroll',
-        () => {
-          if (ticking) return;
-          ticking = true;
-          requestAnimationFrame(() => {
-            ticking = false;
-            const passed = Math.min(1, Math.max(0, window.scrollY / (root.offsetHeight || 1)));
-            parallax.style.transform = `translateY(${14 * passed}%)`;
-            backdrop.style.transform = `translateY(${5 * passed}%)`;
-          });
-        },
-        { passive: true },
-      );
-    }
-
-    // Swipe between slides on touch screens (mostly-horizontal swipes only).
-    // Swipes on the 3D garden turn it instead.
-    let touch = null;
-    listen(
-      root,
-      'touchstart',
-      (e) => {
-        touch = e.target.closest('.hero-scene') ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
-      },
-      { passive: true },
-    );
-    listen(
-      root,
-      'touchend',
-      (e) => {
-        if (!touch) return;
-        const dx = e.changedTouches[0].clientX - touch.x;
-        const dy = e.changedTouches[0].clientY - touch.y;
-        touch = null;
-        if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-        go(dx < 0 ? (current + 1) % n : (current - 1 + n) % n);
-      },
-      { passive: true },
-    );
-
-    // The first slide is already on screen (it comes with the page); the
-    // slideshow starts from it. One slide alone has nowhere to go.
-    if (n > 1) schedule(0);
 
     return () => {
       alive = false;
+      aimRef.current = null;
+      buildRef.current = null;
       cleanups.forEach((fn) => fn());
       root.getAnimations?.({ subtree: true }).forEach((a) => a.cancel());
     };
@@ -279,7 +243,15 @@ export default function Hero() {
   };
 
   return (
-    <section className="hero" id="top" ref={rootRef} aria-roledescription="carousel" aria-label="What we do">
+    <section
+      className="hero"
+      id="top"
+      ref={rootRef}
+      aria-label="What we do"
+      style={{ '--chapters': slides.length }}
+      data-story={slides.length > 1 ? '' : undefined}
+    >
+      <div className="hero__stage">
       <h1 className="sr-only">
         {brand.name}: {brand.tagline}
       </h1>
@@ -321,7 +293,7 @@ export default function Hero() {
         <button
           type="button"
           className="hero__play"
-          aria-label={playing ? 'Pause the slideshow' : 'Play the slideshow'}
+          aria-label={playing ? 'Pause the animation' : 'Play the animation'}
           onClick={() => controls.current.setPlaying(!playing)}
         >
           {playing ? (
@@ -371,18 +343,23 @@ export default function Hero() {
       <div className="hero__art">
         <div className="hero__sculpture">
           <div className="hero__glow" aria-hidden="true" />
-          {/* Shown until the 3D garden takes over, and kept without WebGL. */}
-          <img
-            ref={posterRef}
-            className={`hero__poster${artReady ? ' is-hidden' : ''}`}
-            src="/hero-poster.webp"
-            srcSet={POSTER_SRCSET}
-            sizes={POSTER_SIZES}
-            alt=""
-            width="960"
-            height="805"
-            fetchPriority="high"
-          />
+          {/* Shown until the 3D garden takes over, and kept without WebGL. The
+              scroll story starts from the bare plate; with reduced motion, or
+              when the garden can't be drawn, it's the whole garden. */}
+          <picture>
+            {!whole && <source media="(prefers-reduced-motion: reduce)" srcSet={POSTER_SRCSET} sizes={POSTER_SIZES} />}
+            <img
+              ref={posterRef}
+              className={`hero__poster${artReady ? ' is-hidden' : ''}`}
+              src={whole ? '/hero-poster.webp' : '/hero-poster-bare.webp'}
+              srcSet={whole ? POSTER_SRCSET : BARE_POSTER_SRCSET}
+              sizes={POSTER_SIZES}
+              alt=""
+              width="960"
+              height="805"
+              fetchPriority="high"
+            />
+          </picture>
           {webgl && (
             <ErrorBoundary>
               <Suspense fallback={null}>
@@ -391,12 +368,16 @@ export default function Hero() {
                   playingRef={playingRef}
                   onReady={onSceneReady}
                   onHold={openPlayground}
+                  split
+                  buildAt={buildAt}
+                  onFail={onSceneFail}
                   onHoldStart={warmPlayground}
                 />
               </Suspense>
             </ErrorBoundary>
           )}
         </div>
+      </div>
       </div>
     </section>
   );

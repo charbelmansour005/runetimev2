@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import SectionHead from './SectionHead';
 import Reveal from './Reveal';
 import WorkArt from './visuals/WorkArt';
@@ -6,6 +6,7 @@ import { Arrow } from './Icons';
 import { useContent } from '../content/ContentProvider';
 import { itemKey, linkProps } from '../content/format';
 import { WORK_TAG_OPTIONS } from '../data/options';
+import { clamp, onScrollFrame } from '../scrollStage';
 import './Work.css';
 
 const FILTERS = [{ value: 'all', label: 'All' }, ...WORK_TAG_OPTIONS];
@@ -72,6 +73,26 @@ export function ProjectArt({ item, eager = false }) {
 export default function Work() {
   const { work } = useContent();
   const [filter, setFilter] = useState('all');
+  const stackRef = useRef(null);
+
+  // The cards stick one over another as the page scrolls; the one being
+  // covered shrinks back and darkens.
+  useEffect(() => {
+    const stack = stackRef.current;
+    if (!stack || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    return onScrollFrame(() => {
+      const cards = [...stack.children];
+      const vh = window.innerHeight;
+      cards.forEach((card, i) => {
+        const next = cards[i + 1];
+        if (!next) return;
+        const top = parseFloat(getComputedStyle(next).top) || 0;
+        const k = clamp((vh - next.getBoundingClientRect().top) / Math.max(vh - top, 1));
+        card.style.transform = `scale(${1 - k * 0.07})`;
+        card.style.setProperty('--shade', (k * 0.55).toFixed(3));
+      });
+    });
+  }, [filter]);
   // Every project switched off in the CMS: hide the section.
   if (!work.items.length) return null;
   const matching = work.items.filter((item) => filter === 'all' || item.tags.includes(filter));
@@ -107,32 +128,36 @@ export default function Work() {
         </p>
       </div>
 
-      <div className="work__grid">
-        {items.map((item, i) => {
-          // Only projects with a link are clickable.
-          const Tile = item.url ? 'a' : 'article';
-          return (
-            <Tile
-              key={`${filter}-${itemKey(item, i)}`}
-              className={`work-tile${item.url ? ' is-linked' : ''}`}
-              style={{ '--tile-bg': item.bg }}
-              {...(item.url ? linkProps(item.url) : {})}
-            >
-              <div className="work-tile__art" aria-hidden="true">
-                <ProjectArt item={item} />
-              </div>
-              <div className="work-tile__overlay">
-                <h3>{item.name}</h3>
-                <p>{item.excerpt}</p>
-                {item.url && (
-                  <span className="work-tile__more">
-                    <ProjectLinkLabel url={item.url} />
-                  </span>
-                )}
-              </div>
-            </Tile>
-          );
-        })}
+      <div className="container">
+        <div className="work__stack" ref={stackRef}>
+          {items.map((item, i) => {
+            // Only projects with a link are clickable.
+            const Card = item.url ? 'a' : 'article';
+            return (
+              <Card
+                key={`${filter}-${itemKey(item, i)}`}
+                className={`work-card${item.url ? ' is-linked' : ''}`}
+                style={{ '--tile-bg': item.bg, '--i': i }}
+                {...(item.url ? linkProps(item.url) : {})}
+              >
+                <div className="work-card__art" aria-hidden="true">
+                  <ProjectArt item={item} />
+                </div>
+                <div className="work-card__copy">
+                  <span className="work-card__num">{String(i + 1).padStart(2, '0')}</span>
+                  <h3>{item.name}</h3>
+                  <p>{item.excerpt}</p>
+                  {item.url && (
+                    <span className="work-card__more">
+                      <ProjectLinkLabel url={item.url} />
+                    </span>
+                  )}
+                </div>
+                <span className="work-card__shade" aria-hidden="true" />
+              </Card>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

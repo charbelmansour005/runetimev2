@@ -67,6 +67,25 @@ const POND = [
 const TORII = { x: 0.35, z: -0.1, ry: 0.3, s: 1.2 };
 const BRIDGE = { x: -2.95, z: -2.1, ry: 0.877, length: 1.9 };
 
+// The order the hero's scroll story builds the garden in, by part (parts.js).
+const BUILD_ORDER = [
+  ['torii'],
+  ['rocks', 'lilies'],
+  ['bridge', 'pagoda'],
+  ['trees'],
+  ['mountain', 'waterfall', 'bamboo'],
+  ['lanterns', 'boats'],
+  ['deer', 'koi'],
+  ['ripples', 'petals', 'fireflies', 'mist'],
+];
+// How high something is while it drops in (t from 0 to 1): it falls,
+// lands at 0.8 and bounces once, a little.
+function dropHeight(t) {
+  if (t <= 0 || t >= 1) return 0;
+  if (t < 0.8) return 2.6 * (1 - (t / 0.8) ** 2);
+  return 0.12 * Math.sin(((t - 0.8) / 0.2) * Math.PI);
+}
+
 // The same garden on every visit.
 function seeded(seed) {
   let a = seed;
@@ -135,7 +154,7 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     counts[id] = (counts[id] ?? 0) + 1;
     part = id;
     unit = `${id}#${counts[id] - 1}`;
-    units.set(unit, { id: unit, part, type, kind, x, z, dx: 0, dz: 0, movable, added, size, hidden: false, live: null });
+    units.set(unit, { id: unit, part, type, kind, x, z, dx: 0, dz: 0, dy: 0, arrive: 1, movable, added, size, hidden: false, live: null });
     return unit;
   }
   const resume = (id) => {
@@ -229,12 +248,12 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     }
   }
 
-  const shine = (x, y, z, size, tint, strength = 1) => glows.push([x, y, z, size, tint, strength, unit]);
+  const shine = (x, y, z, size, tint, strength = 1, mirrored = false) => glows.push([x, y, z, size, tint, strength, unit, mirrored]);
   const glow = (x, y, z, size, tint, strength = 1) => {
     shine(x, y, z, size, tint, strength);
     // And its reflection, unless that would fall below the base.
     const mirrored = 2 * WATER - y;
-    if (mirrored > -DEPTH + 0.2) shine(x, mirrored, z, size * 0.9, tint, strength * 0.45);
+    if (mirrored > -DEPTH + 0.2) shine(x, mirrored, z, size * 0.9, tint, strength * 0.45, true);
   };
 
   // ---------- Pond outline ----------
@@ -1212,18 +1231,21 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   // Soft halos around lights, in one draw: sized in world units. (Written
   // again whenever the playground moves, hides or adds something.)
   const haloGeometry = new THREE.BufferGeometry();
-  const isShown = (owner) => !owner || (!owner.hidden && shown.get(owner.part) !== false && shown.get(NEEDS[owner.part]) !== false);
+  const isShown = (owner) =>
+    !owner || (!owner.hidden && owner.arrive > 0 && shown.get(owner.part) !== false && shown.get(NEEDS[owner.part]) !== false);
   const shown = new Map();
   function syncHalos() {
     const positions = [];
     const sizes = [];
     const tints = [];
-    for (const [x, y, z, size, tint, strength, owner] of glows) {
+    for (const [x, y, z, size, tint, strength, owner, mirrored] of glows) {
       const from = units.get(owner);
-      positions.push(x + (from?.dx ?? 0), y, z + (from?.dz ?? 0));
+      // (A reflection's light moves the other way when its unit drops in.)
+      const dy = (from?.dy ?? 0) * (mirrored ? -1 : 1);
+      positions.push(x + (from?.dx ?? 0), y + dy, z + (from?.dz ?? 0));
       sizes.push(size);
       const c = color(tint);
-      tints.push(c.r, c.g, c.b, isShown(from) ? strength : 0);
+      tints.push(c.r, c.g, c.b, isShown(from) ? strength * Math.min(1, from?.arrive ?? 1) : 0);
     }
     haloGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     haloGeometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
@@ -1392,12 +1414,13 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     const visible = isShown(owner);
     for (const mesh of meshesOf(owner.id)) {
       mesh.visible = visible;
-      mesh.position.set(owner.dx, 0, owner.dz);
+      // A reflection drops the other way.
+      mesh.position.set(owner.dx, mesh.parent === reflections ? -owner.dy : owner.dy, owner.dz);
       mesh.updateMatrix();
     }
     if (owner.live) {
       owner.live.visible = visible;
-      owner.live.position.set(owner.dx, 0, owner.dz);
+      owner.live.position.set(owner.dx, owner.dy, owner.dz);
     }
   }
   const refresh = () => {
@@ -1460,6 +1483,23 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
     group,
     // The plate's half-width and half-depth.
     plate,
+    // The hero's scroll story builds the garden: `b` from 0 (the bare plate
+    // and pond) to 1 (everything). Things arrive in stages, a few at a time;
+    // each drops in from above and settles with a little bounce.
+    setBuild(b) {
+      const stages = BUILD_ORDER.map((parts) => [...units.values()].filter((u) => parts.includes(u.part) && !u.added));
+      stages.forEach((members, s) => {
+        const local = b * stages.length - s;
+        members.forEach((owner, j) => {
+          const t = Math.min(Math.max((local - (j / Math.max(members.length, 1)) * 0.45) / 0.55, 0), 1);
+          if (t === owner.arrive) return;
+          owner.arrive = t;
+          owner.dy = dropHeight(t);
+          place(owner);
+        });
+      });
+      syncHalos();
+    },
     // Shows or hides a whole part (see parts.js), and whatever depends on it.
     setVisible(id, on) {
       shown.set(id, on);

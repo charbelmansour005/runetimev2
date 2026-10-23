@@ -66,12 +66,13 @@ function HeroScene({
   onHold,
   onHoldStart,
   onFail,
+  buildAt,
 }) {
   const mountRef = useRef(null);
   const holdRef = useRef(null);
   const keyRef = useRef(null);
   const handlers = useRef({});
-  handlers.current = { onReady, onGarden, onHold, onHoldStart, onFail };
+  handlers.current = { onReady, onGarden, onHold, onHoldStart, onFail, buildAt };
   const [ready, setReady] = useState(false);
   const [touched, setTouched] = useState(false);
 
@@ -131,6 +132,8 @@ function HeroScene({
       const garden = await buildGarden({ pause: makePause(6), split });
       resources.push(() => garden.dispose());
       if (disposed) return teardown();
+      // Built as far as the hero's story says, before anything is drawn.
+      if (handlers.current.buildAt) garden.setBuild(handlers.current.buildAt());
       scene.add(garden.group);
 
       // --- Camera ------------------------------------------------------------
@@ -279,7 +282,18 @@ function HeroScene({
       io.observe(mount);
 
       // The pause button stops the garden too.
-      if (apiRef) apiRef.current = { setPlaying: () => wake(), resetView: () => (orbit.home(), wake()) };
+      if (apiRef) {
+        apiRef.current = {
+          setPlaying: () => wake(),
+          resetView: () => (orbit.home(), wake()),
+          // The hero's scroll story: how far the garden is built (0–1).
+          build: (b) => {
+            garden.setBuild(b);
+            renderer.shadowMap.needsUpdate = true;
+            wake();
+          },
+        };
+      }
 
       // The playground edits the garden through this (see scene/editor.js).
       const redraw = () => {

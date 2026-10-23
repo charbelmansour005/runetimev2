@@ -1,5 +1,5 @@
 .work {
-  padding-bottom: 0;
+  padding-bottom: var(--section-pad);
 }
 
 .work .section-head {
@@ -147,5 +147,131 @@
 
   .work-tile__more {
     opacity: 1;
+  }
+}
+
+/* ---------- The home page's stacked cards (Work.jsx) ----------
+   With motion, each card sticks a little below the one before, so they pile
+   up as the page scrolls; without, they're simply one under another. */
+.work__stack {
+  display: grid;
+  gap: 28px;
+}
+
+.work-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  min-height: min(68svh, 560px);
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--tile-bg);
+  color: var(--ink-900);
+  text-decoration: none;
+  transform-origin: center top;
+  box-shadow: 0 -20px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+.work-card__art {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The drawn device, larger than on a small tile. */
+.work-card__art .work-art {
+  transform: scale(1.35);
+  transform-origin: 35% 40%;
+  transition: transform 0.6s var(--ease-out-3);
+}
+
+.work-card.is-linked:hover .work-card__art .work-art {
+  transform: scale(1.42);
+}
+
+.work-card__copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 48px 48px 48px 24px;
+}
+
+.work-card__num {
+  color: rgba(14, 14, 14, 0.45);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.work-card__copy h3 {
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -1.2px;
+}
+
+.work-card__copy p {
+  max-width: 440px;
+  color: rgba(14, 14, 14, 0.72);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.work-card__more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--ink-900);
+  color: var(--white);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.work-card__shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: var(--shade, 0);
+  pointer-events: none;
+}
+
+.work-card:focus-visible {
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .work-card {
+    position: sticky;
+    top: calc(var(--header-h-scrolled) + 24px + var(--i) * 14px);
+  }
+
+  .work__stack {
+    gap: 9svh;
+  }
+}
+
+@media (max-width: 860px) {
+  .work-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-height: min(64svh, 560px);
+    border-radius: 22px;
+  }
+
+  .work-card__art .work-art {
+    transform: scale(1.1);
+  }
+
+  .work-card__copy {
+    gap: 8px;
+    padding: 0 24px 26px;
+  }
+
+  .work-card__copy p {
+    font-size: 14px;
   }
 }

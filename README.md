@@ -108,8 +108,8 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
   `src/data/insights/<slug>.md` — the default articles' text, added when the database is seeded
   (`server/lib/defaults.js`); `src/data/insights.js` — article helpers shared by the site, CMS and API.
 - `src/content/` — loads content from the API for the site.
-- `src/components/` — site sections; `src/components/hero/` — the slideshow (`Hero.jsx`, Web Animations
-  API; it also decides when the 3D scene starts: after the page has loaded and settled, and on phones
+- `src/components/` — site sections; `src/scrollStage.js` drives the pinned, scroll-driven pieces (hero story,
+  services ring, stacked work cards); `src/components/hero/` — the hero's scroll story (`Hero.jsx`; it also decides when the 3D scene starts: after the page has loaded and settled, and on phones
   at the first touch or scroll) and the 3D garden (`HeroScene.jsx`; `scene/garden.js` builds the model
   in code, in slices of a few milliseconds; `scene/orbit.js` handles drag, wheel, pinch and keyboard;
   `scene/parts.js` lists the parts a visitor can switch off in the playground).

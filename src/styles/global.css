@@ -410,10 +410,8 @@ button {
 
     /* Cards rise and settle as they come into view, a row's columns a beat
        apart. (These take over from the plain fade-in.) */
-    .service-card,
     .solution-card,
     .post-card,
-    .stat,
     .project-card {
       transition: none;
       animation: rise linear both;
@@ -421,30 +419,19 @@ button {
       animation-range: entry 0% cover 30%;
     }
 
-    :is(.services__grid, .solutions__grid, .insights__grid, .numbers__stats) > :nth-child(4n + 2) {
+    :is(.solutions__grid, .insights__grid, .numbers__stats) > :nth-child(4n + 2) {
       animation-range: entry 4% cover 33%;
     }
 
-    :is(.services__grid, .solutions__grid, .insights__grid, .numbers__stats) > :nth-child(4n + 3) {
+    :is(.solutions__grid, .insights__grid, .numbers__stats) > :nth-child(4n + 3) {
       animation-range: entry 8% cover 36%;
     }
 
-    :is(.services__grid, .solutions__grid, .insights__grid, .numbers__stats) > :nth-child(4n + 4) {
+    :is(.solutions__grid, .insights__grid, .numbers__stats) > :nth-child(4n + 4) {
       animation-range: entry 12% cover 39%;
     }
 
-    /* Work: tiles climb at different speeds, and the art inside settles
-       from a slight zoom. */
-    .work__grid > .work-tile {
-      animation: climb linear both;
-      animation-timeline: view();
-      animation-range: entry 0% cover 45%;
-    }
-
-    .work__grid > .work-tile:nth-child(even) {
-      animation-name: climb-far;
-    }
-
+    /* Work page: the art inside each project settles from a slight zoom. */
     .work-tile__art {
       animation: settle linear both;
       animation-timeline: view();
@@ -472,7 +459,6 @@ button {
 
     /* Decorative shards drift against the scroll, for depth. */
     .about__shard,
-    .numbers__shard,
     .post-cover__shard {
       animation: drift linear both;
       animation-timeline: view();
@@ -512,30 +498,6 @@ button {
   to {
     opacity: 1;
     transform: none;
-  }
-}
-
-@keyframes climb {
-  from {
-    opacity: 0;
-    translate: 0 90px;
-  }
-
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-
-@keyframes climb-far {
-  from {
-    opacity: 0;
-    translate: 0 170px;
-  }
-
-  to {
-    opacity: 1;
-    translate: 0 0;
   }
 }
 

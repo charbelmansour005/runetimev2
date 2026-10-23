@@ -193,7 +193,13 @@ export default function Header() {
   const menuRef = useRef(null);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 80);
+    // On the home page the header stays clear over the hero's pinned story,
+    // and turns solid as the page carries on below it.
+    const onScroll = () => {
+      const hero = document.querySelector('.hero[data-story]');
+      const pinned = hero ? hero.offsetHeight - window.innerHeight : 0;
+      setScrolled(window.scrollY > Math.max(80, pinned - 40));
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);

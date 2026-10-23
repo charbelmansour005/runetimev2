@@ -13,7 +13,7 @@ export const defaultContent = {
   brand: {
     name: 'Runtime Collective',
     tagline: 'Software & AI engineering, built to run.',
-    email: 'hello@runtimecollective.com', // TODO: replace with the real inbox
+    email: 'charbel@runtimecollective.dev',
     socials: [
       { label: 'LinkedIn', href: '#', icon: 'linkedin' },
       { label: 'GitHub', href: '#', icon: 'github' },

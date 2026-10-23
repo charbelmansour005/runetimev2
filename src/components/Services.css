@@ -111,3 +111,154 @@
     gap: 16px;
   }
 }
+
+/* ---------- The ring (Services.jsx) ----------
+   Without motion it's the grid above, and the list beside it is hidden. */
+.services__list {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .services[data-ring] {
+    --card-w: 300px;
+    --card-h: 330px;
+    /* The ring's radius: wide enough for every card to sit side by side. */
+    --r: calc(var(--card-w) / (2 * tan(180deg / var(--count))) + 60px);
+    height: calc(100svh + (var(--count) - 1) * 35svh);
+    padding: 0;
+  }
+
+  .services[data-ring] .services__pin {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    height: 100svh;
+    overflow: hidden;
+  }
+
+  .services[data-ring] .services__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: 40px;
+  }
+
+  .services[data-ring] .section-head {
+    margin-bottom: 28px;
+  }
+
+  .services[data-ring] .services__list {
+    display: grid;
+    gap: 2px;
+    list-style: none;
+  }
+
+  .services__pick {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    width: 100%;
+    padding: 7px 0;
+    border: 0;
+    background: none;
+    color: var(--ink-500);
+    font: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      color 0.25s,
+      transform 0.35s var(--ease-out-3);
+  }
+
+  .services__num {
+    color: var(--lilac);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .services__pick:hover {
+    color: var(--ink-700);
+  }
+
+  .services__pick[aria-current='true'] {
+    color: var(--violet);
+    transform: translateX(8px);
+  }
+
+  .services__pick[aria-current='true'] .services__num {
+    color: var(--violet);
+  }
+
+  .services[data-ring] .services__stage {
+    display: grid;
+    place-items: center;
+    height: calc(var(--card-h) + 80px);
+    perspective: 1700px;
+  }
+
+  .services[data-ring] .services__ring {
+    position: relative;
+    display: block;
+    width: var(--card-w);
+    height: var(--card-h);
+    transform-style: preserve-3d;
+    transform: translateZ(calc(var(--r) * -1)) rotateX(-6deg) rotateY(var(--turn, 0deg));
+  }
+
+  .services[data-ring] .services__ring > .service-card {
+    position: absolute;
+    inset: 0;
+    box-shadow: 0 30px 60px -30px rgba(40, 1, 124, 0.35);
+    opacity: 1;
+    transform: rotateY(calc(var(--i) * 360deg / var(--count))) translateZ(var(--r));
+    backface-visibility: hidden;
+    animation: none;
+  }
+
+  /* The cards away from the front sit behind a veil of the section's
+     colour (a veil, not transparency, so the text itself keeps its contrast). */
+  .services[data-ring] .services__ring > .service-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--mist);
+    opacity: 0.68;
+    pointer-events: none;
+    transition: opacity 0.35s;
+  }
+
+  .services[data-ring] .services__ring > .service-card.is-front::after {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
+  .services[data-ring] {
+    --card-w: 240px;
+    --card-h: 300px;
+    height: calc(100svh + (var(--count) - 1) * 22svh);
+  }
+
+  .services[data-ring] .services__layout {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .services[data-ring] .section-intro,
+  .services[data-ring] .services__list {
+    display: none;
+  }
+
+  .services[data-ring] .section-head {
+    margin-bottom: 0;
+  }
+
+  .services[data-ring] .services__stage {
+    height: calc(var(--card-h) + 40px);
+  }
+}
