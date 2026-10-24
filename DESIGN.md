@@ -177,6 +177,10 @@ lavender, ice, aqua.
   over. Both are plain layouts with reduced motion. Pin lengths are set in CSS (so links to a section
   land right before the scripts run) and are shorter on phones; one scroll listener drives all three
   (`src/scrollStage.js`).
+- **Industries** pins too: the scroll picks the industry (a rail beside the tabs fills as the chapters
+  go by), its copy arrives line by line and the layers of its illustration fly in one after another,
+  then drift with the scroll at different depths. Clicking a tab scrolls to its chapter. Plain tabs
+  with reduced motion.
 - **The Collective in Numbers** pins too, and gives each stat the stage in turn: a huge outlined number
   that fills as it counts with the scroll, over a picture of its own value (`visuals/StatVisual.jsx`: a
   ring that closes to a percentage, a field of 1,000 dots for a large count, figures for a small one).
