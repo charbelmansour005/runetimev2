@@ -146,6 +146,19 @@ export const defaultContent = {
     intro: 'A few of the products we have designed, built — and still help run.',
     items: [
       {
+        name: 'Dental clinic app',
+        excerpt:
+          '(Private App) A dental clinic app where patients book appointments, get reminders and see their treatment history.',
+        tags: ['mobile'],
+        bg: '#D6ECF3',
+        device: 'phone',
+        app: 'health',
+        url: '',
+        image: '',
+        imageFit: 'screen',
+        icon: { from: '#2A9DC4', to: '#1B7FA3', mark: 'D', accent: '#FFFFFF' },
+      },
+      {
         name: 'Workshop job tracker',
         excerpt:
           '(Private App) An Arabic-first job tracker for fit-out workshops, with task timers and offline sync from the shop floor to the site.',
