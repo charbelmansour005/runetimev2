@@ -13,7 +13,7 @@ const NAV = [
   { label: 'Industries', href: '/#industries', menu: 'industries' },
   { label: 'Work', href: '/work' },
   { label: 'Insights', href: '/insights' },
-  { label: 'Contact', href: '/#contact' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 // Dropdown links and promos come from the matching CMS sections.
@@ -43,7 +43,7 @@ function MegaMenu({ id, menu, onNavigate }) {
         <div className="mega__promo">
           <p className="mega__promo-title">{menu.promo.title}</p>
           <p className="mega__promo-text">{menu.promo.text}</p>
-          <a className="btn btn--accent" href="/#contact" onClick={onNavigate}>
+          <a className="btn btn--accent" href="/contact" onClick={onNavigate}>
             Start a project <Arrow />
           </a>
         </div>
@@ -175,7 +175,7 @@ function MobileMenu({ open, onClose, menus, menuRef }) {
           ))}
         </ul>
       </nav>
-      <a className="btn btn--primary mobile-menu__cta" href="/#contact" onClick={onClose} tabIndex={open ? 0 : -1}>
+      <a className="btn btn--primary mobile-menu__cta" href="/contact" onClick={onClose} tabIndex={open ? 0 : -1}>
         Get in touch
       </a>
       <a className="mobile-menu__mail" href={`mailto:${brand.email}`} tabIndex={open ? 0 : -1}>

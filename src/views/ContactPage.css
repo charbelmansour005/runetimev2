@@ -1,0 +1,42 @@
+/* One dark page: the band, the form and the footer share a single backdrop
+   that runs from the header's colour down to the footer's, with no white and
+   no hard edges between them. */
+.contact-page {
+  position: relative;
+  overflow-x: clip;
+  background:
+    /* The last stretch fades into the footer's colour, so the glow has no edge. */
+    linear-gradient(180deg, transparent calc(100% - 220px), var(--ink-900) 100%),
+    radial-gradient(55% 40% at 88% 66%, rgba(77, 0, 242, 0.4), transparent 72%),
+    radial-gradient(45% 28% at 10% 6%, rgba(139, 92, 255, 0.16), transparent 72%),
+    linear-gradient(180deg, #0d0016 0%, #170f20 38%, var(--ink-900) 100%);
+}
+
+.contact-page .page-hero {
+  padding-bottom: 8px;
+  background: none;
+}
+
+.contact-page .contact {
+  padding-block: 24px 120px;
+  background: none;
+}
+
+/* The card is just the layout now: copy on the left, the form on the right,
+   both sitting straight on the page. */
+.contact-page .contact-card {
+  padding: 0;
+  overflow: visible;
+  background: none;
+}
+
+@media (max-width: 960px) {
+  .contact-page .contact {
+    padding-bottom: 72px;
+  }
+}
+
+/* The shards are for the card on the home page; here the glow does the job. */
+.contact-page .contact-card__shard {
+  display: none;
+}
