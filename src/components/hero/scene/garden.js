@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { at, Batch, block, color, cylinder, faceted, glowSprite, halo } from './kit';
+import { createDragon } from './dragon';
 import { NEEDS } from './parts';
 
 // The hero's miniature: a vermilion torii gate standing in a pond at dusk,
@@ -68,8 +69,9 @@ const TORII = { x: 0.35, z: -0.1, ry: 0.3, s: 1.2 };
 const BRIDGE = { x: -2.95, z: -2.1, ry: 0.877, length: 1.9 };
 
 // The order the hero's scroll story builds the garden in, by part (parts.js).
+// (The torii and the pond are there from the start, so the first screen
+// isn't an empty slab.)
 const BUILD_ORDER = [
-  ['torii'],
   ['rocks', 'lilies'],
   ['bridge', 'pagoda'],
   ['trees'],
@@ -77,6 +79,7 @@ const BUILD_ORDER = [
   ['lanterns', 'boats'],
   ['deer', 'koi'],
   ['ripples', 'petals', 'fireflies', 'mist'],
+  ['dragon'],
 ];
 // How high something is while it drops in (t from 0 to 1): it falls,
 // lands at 0.8 and bounces once, a little.
@@ -136,7 +139,7 @@ const pyramid = (r, h) => faceted(new THREE.ConeGeometry(r, h, 4).rotateY(Math.P
 // With `split` (the playground), every part of the garden (see parts.js) is
 // kept in meshes of its own, so it can be switched off; otherwise everything
 // still is merged into one mesh per material.
-export async function buildGarden({ pause = async () => {}, split = false } = {}) {
+export async function buildGarden({ pause = async () => {}, split = false, dragon = true } = {}) {
   const rand = seeded(7);
   const between = (min, max) => min + rand() * (max - min);
   const batch = new Batch({ split });
@@ -1383,6 +1386,21 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
   }
   await pause();
 
+  // ---------- Dragon ----------
+  // A jade dragon flying a loop over the garden and through the torii (see
+  // dragon.js). It moves, so it's not for people who ask for reduced motion:
+  // the scene is built without it for them.
+  let flying = null;
+  if (dragon) {
+    begin('dragon', { movable: false });
+    flying = createDragon();
+    const owner = units.get(unit);
+    keep(flying.group);
+    extra.push(...flying.disposables);
+    animate((t) => flying.update(t, owner.arrive));
+    await pause();
+  }
+
   // The still parts, merged: one mesh per material (and per unit, in the
   // playground), and the same again for their reflections.
   const reflections = new THREE.Group();
@@ -1494,7 +1512,8 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
           const t = Math.min(Math.max((local - (j / Math.max(members.length, 1)) * 0.45) / 0.55, 0), 1);
           if (t === owner.arrive) return;
           owner.arrive = t;
-          owner.dy = dropHeight(t);
+          // (The dragon unfolds out of the torii instead of dropping in.)
+          owner.dy = owner.part === 'dragon' ? 0 : dropHeight(t);
           place(owner);
         });
       });
@@ -1633,6 +1652,11 @@ export async function buildGarden({ pause = async () => {}, split = false } = {}
         return null;
       }
       return null;
+    },
+    // How wide the view is at the garden (world units each way), so the
+    // dragon can roam the whole width of the screen.
+    setReach(reach, shift) {
+      flying?.setReach(reach, shift);
     },
     // Pixels per world unit at distance 1, for the halos.
     setPixelScale(value) {

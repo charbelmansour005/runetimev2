@@ -1,7 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import ClutchBadge from '../ClutchBadge';
 import ErrorBoundary from '../ErrorBoundary';
+import PageLink from '../PageLink';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
 import { clamp, onScrollFrame, pinProgress, scrollToProgress, smooth } from '../../scrollStage';
@@ -23,8 +25,10 @@ const settled = (animations) => Promise.all(animations.map((a) => a.finished.cat
 // between titles the garden is built a little further (garden.js decides
 // what arrives when). Returns how much each title shows, and how far the
 // garden is built (0–1).
-const HOLD = 1;
-const GAP = 1.5;
+// (Short: each title holds for about a third of a screen's scroll, and the
+// garden builds in the gaps.)
+const HOLD = 1.3;
+const GAP = 1;
 function storyAt(p, n) {
   const total = n * HOLD + (n - 1) * GAP;
   const u = clamp(p / 0.96) * total;
@@ -180,6 +184,8 @@ export default function Hero() {
         });
         show(on);
         progress.style.transform = `scaleX(${p})`;
+        // The hint about dragging has done its job once the story is under way.
+        root.toggleAttribute('data-started', p > 0.01);
         fills.forEach((el, i) => {
           el.style.transform = `scaleX(${titles[i].fill})`;
         });
@@ -280,12 +286,21 @@ export default function Hero() {
                   </span>
                 ))}
               </h2>
-              <a className="btn btn--primary hero__cta" href="#contact" tabIndex={i === active ? 0 : -1}>
-                <span className="hero__cta-dot" aria-hidden="true" />
-                Get in touch
-              </a>
             </div>
           ))}
+        </div>
+        {/* The same on every title: where to go next, and what clients say. */}
+        <div className="hero__actions">
+          <PageLink className="btn btn--primary hero__cta" href="/contact">
+            <span className="hero__cta-dot" aria-hidden="true" />
+            Start a project
+          </PageLink>
+          <a className="btn hero__secondary" href="/#work">
+            See our work
+          </a>
+          <div className="hero__rating">
+            <ClutchBadge whenIdle />
+          </div>
         </div>
       </div>
 

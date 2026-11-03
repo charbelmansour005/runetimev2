@@ -5,10 +5,15 @@ import { makePause, yieldNow } from './scene/kit';
 import { createOrbit, HOME } from './scene/orbit';
 
 const FOV = 30;
-// Where the garden's centre sits, as a share of the canvas height, and how
-// much of the canvas it fills at full zoom-out (the tab bar covers the bottom
-// on desktop).
-const HERO_FRAME = { centerY: 0.45, fill: { x: 0.84, y: 0.66 }, bounds: BOUNDS };
+// Where the garden's centre sits, as a share of the canvas's width and
+// height, and how much of the canvas it fills at full zoom-out. In the hero
+// the garden is big (it bleeds off the right edge, and the tab bar covers
+// some of the bottom) and sits right of centre, leaving the left for the
+// title. Phones put it in the middle, above the title.
+const HERO_FRAME = { centerX: 0.62, centerY: 0.5, fill: { x: 1.18, y: 0.92 }, bounds: BOUNDS };
+// For rendering the posters (see scripts/render-poster.mjs): the whole garden, uncropped.
+const POSTER_FRAME = { centerX: 0.5, centerY: 0.5, fill: { x: 0.8, y: 0.6 }, bounds: BOUNDS };
+const PHONE_FRAME = { centerX: 0.5, centerY: 0.44, fill: { x: 1.12, y: 0.8 }, bounds: BOUNDS };
 const LABEL =
   '3D illustration of a red torii gate standing in a pond, with a pagoda, a mountain with a waterfall, deer and cherry trees on the shore. Drag to turn it and scroll to zoom, or use the arrow keys and the plus and minus keys.';
 // How long a press must stay still to count as a hold, and how far it may stray.
@@ -129,7 +134,7 @@ function HeroScene({
       await yieldNow();
       if (disposed) return teardown();
       // Built in slices of a few milliseconds, so the page stays responsive.
-      const garden = await buildGarden({ pause: makePause(6), split });
+      const garden = await buildGarden({ pause: makePause(6), split, dragon: !reduced });
       resources.push(() => garden.dispose());
       if (disposed) return teardown();
       // Built as far as the hero's story says, before anything is drawn.
@@ -139,6 +144,7 @@ function HeroScene({
       // --- Camera ------------------------------------------------------------
       let fit = 10;
       let bounds = framing.bounds;
+      const asPoster = /[?&]poster=/.test(window.location.search);
       let wall = 0;
       let interacted = false;
       const orbit = createOrbit({
@@ -196,9 +202,18 @@ function HeroScene({
         const height = mount.clientHeight || 1;
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
-        camera.setViewOffset(width, height, 0, (0.5 - framing.centerY) * height, width, height);
+        // (The hero's own frame becomes the phone's on a narrow screen.)
+        const f = asPoster ? POSTER_FRAME : framing === HERO_FRAME && window.innerWidth <= 900 ? PHONE_FRAME : framing;
+        const cx = f.centerX ?? 0.5;
+        camera.setViewOffset(width, height, (0.5 - cx) * width, (0.5 - f.centerY) * height, width, height);
         camera.updateProjectionMatrix();
-        fit = fitDistance(camera.aspect, { fill: framing.fill, bounds });
+        fit = fitDistance(camera.aspect, { fill: f.fill, bounds });
+        // The width of the view at the garden, and where the garden sits in
+        // it: the dragon roams all of it, edge to edge.
+        const halfWidth = Math.tan(rad(FOV / 2)) * camera.aspect * fit;
+        garden.setReach(halfWidth, (1 - 2 * cx) * halfWidth);
+        // (Read by scripts/render-poster.mjs, which sizes the posters from it.)
+        mount.dataset.pxPerUnit = String(height / (2 * Math.tan(rad(FOV / 2)) * fit));
         garden.setPixelScale((height * renderer.getPixelRatio()) / (2 * Math.tan(rad(FOV / 2))));
         if (compiled) wake();
       };

@@ -22,7 +22,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .hero[data-story] {
-    height: calc(100svh + var(--chapters) * 85svh);
+    height: calc(100svh + var(--chapters) * 45svh);
   }
 
   .hero[data-story] .hero__stage {
@@ -42,7 +42,7 @@
 
 @media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
   .hero[data-story] {
-    height: calc(100svh + var(--chapters) * 50svh);
+    height: calc(100svh + var(--chapters) * 34svh);
   }
 }
 
@@ -129,13 +129,11 @@
   touch-action: pan-y;
 }
 
-/* Zoomed in, the garden fades out towards the headline and under the header
-   instead of ending in a hard edge. */
+/* The garden (and the dragon, which roams the whole width of the screen)
+   fades out only under the header, instead of ending in a hard edge. */
 .hero-scene__canvas {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent 8%, #000 19%);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to right, transparent, #000 12%), linear-gradient(to bottom, transparent 8%, #000 19%);
-  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 2%, #000 10%);
+  mask-image: linear-gradient(to bottom, transparent 2%, #000 10%);
 }
 
 /* Hold to edit: a ring that fills at the pointer while the garden is held. */
@@ -199,8 +197,9 @@
 
 .hero-scene__hint {
   position: absolute;
-  left: 50%;
-  bottom: 168px;
+  /* Under the garden, which sits right of centre. */
+  left: 62%;
+  bottom: 78px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -277,10 +276,11 @@
    about as wide as it is tall. Rendered by the scene itself, so the two line up. */
 .hero__poster {
   position: absolute;
-  left: 50%;
-  top: 45%;
-  width: 78.9%;
-  width: min(78.45cqw, 78.35cqh);
+  left: 62%;
+  top: 50%;
+  /* Sized like the scene: its width is set by whichever of the canvas's
+     width and height fits the garden (numbers from scripts/render-poster.mjs). */
+  width: min(108.05cqw, 103.14cqh);
   height: auto;
   max-width: none;
   transform: translate(-50%, -50%);
@@ -298,18 +298,19 @@
   position: relative;
   z-index: 2;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
   height: 100%;
-  text-align: center;
   padding-top: var(--header-h);
-  padding-bottom: 140px;
+  padding-bottom: 92px;
   pointer-events: none;
 }
 
+/* The title sits low on the left; the garden has the rest of the stage. */
 .hero__slides {
   display: grid;
-  width: 100%;
+  width: min(100%, 600px);
 }
 
 /* Only the words and the button take the pointer: the space around them
@@ -321,8 +322,8 @@
 
 .hero__slide {
   grid-area: 1 / 1;
-  align-self: center;
-  justify-self: center;
+  align-self: end;
+  justify-self: start;
 }
 
 /* A soft dark wash behind each title, so it reads over the garden. It's
@@ -335,9 +336,9 @@
 .hero__slide::before {
   content: '';
   position: absolute;
-  inset: -18% -6%;
+  inset: -30% -30% -22% -22%;
   z-index: -1;
-  background: radial-gradient(closest-side, rgba(13, 0, 22, 0.62), rgba(13, 0, 22, 0.3) 60%, transparent);
+  background: radial-gradient(closest-side, rgba(13, 0, 22, 0.6), rgba(13, 0, 22, 0.28) 62%, transparent);
   pointer-events: none;
 }
 
@@ -365,8 +366,41 @@
   animation: cta-ping 2.4s var(--ease-out-3) infinite;
 }
 
-.hero__slide:not(.is-active) .hero__cta-dot::after {
-  animation: none;
+.hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 16px;
+  margin-top: 30px;
+}
+
+.hero__actions > * {
+  pointer-events: auto;
+}
+
+.hero__secondary {
+  height: 55px;
+  padding: 0 24px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--white);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.hero__secondary:hover {
+  border-color: var(--white);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Clutch's own badge (it brings its own size); kept to one line high so the
+   buttons beside it set the row's height. */
+.hero__rating {
+  min-width: 200px;
+  min-height: 45px;
 }
 
 @keyframes cta-ping {
@@ -383,39 +417,33 @@
 }
 
 .hero__title {
-  margin-bottom: 36px;
+  margin-bottom: 0;
   color: var(--white);
-  font-size: clamp(44px, 5.6vw, 88px);
+  font-size: clamp(34px, 3.8vw, 60px);
   font-weight: 700;
   line-height: 1.12;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.05em;
   text-shadow: 0 4px 30px rgba(13, 0, 22, 0.7);
 }
 
 .hero__line {
   display: block;
   width: fit-content;
-  margin-inline: auto;
 }
 
-/* ---------- Glass tab bar ---------- */
+/* ---------- The chapter strip: slim, along the bottom ---------- */
 
 .hero__tabbar {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  bottom: 22px;
   z-index: 3;
   display: grid;
   grid-template-columns: auto 1fr;
-  align-items: start;
-  width: min(1400px, calc(100% - 40px));
+  align-items: center;
+  gap: 18px;
+  width: min(var(--container), calc(100% - var(--gutter) * 2));
   transform: translateX(-50%);
-  border: 1px solid var(--glass-stroke);
-  border-bottom: 0;
-  border-radius: 20px 20px 0 0;
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
 }
 
 .hero__tabs {
@@ -427,9 +455,9 @@
 .hero__play {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: 18px 0 0 18px;
+  width: 36px;
+  height: 36px;
+  margin: 0;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
@@ -455,8 +483,8 @@
 .hero-tab {
   position: relative;
   display: block;
-  min-height: 140px;
-  padding: 20px 25px;
+  min-height: 0;
+  padding: 10px 14px 6px 0;
   border: 0;
   background: transparent;
   color: var(--white);
@@ -476,12 +504,9 @@
   position: relative;
   display: block;
   height: 3px;
-  margin-bottom: 15px;
+  margin-bottom: 9px;
   overflow: hidden;
   border-radius: 2px;
-}
-
-.hero-tab.is-active .hero-tab__bar {
   background: rgba(255, 255, 255, 0.14);
 }
 
@@ -502,26 +527,20 @@
 }
 
 .hero-tab__text {
-  display: block;
-  margin-top: 10px;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 20px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1200px) {
-  .hero__art {
-    width: 64%;
-  }
-
-  .hero-tab {
-    padding: 18px 20px;
-  }
-
-  .hero-tab__text {
-    font-size: 14px;
+  /* Narrower, the title shrinks so the garden keeps its share of the stage. */
+  .hero__title {
+    font-size: clamp(30px, 3.6vw, 44px);
   }
 }
 
@@ -536,8 +555,15 @@
     bottom: 90px;
   }
 
+  .hero__poster {
+    left: 50%;
+    top: 44%;
+    width: min(105.62cqw, 91.9cqh);
+  }
+
   /* Above the garden here: the headline fills the space below it. */
   .hero-scene__hint {
+    left: 50%;
     top: 6px;
     bottom: auto;
   }
@@ -553,8 +579,8 @@
 
   .hero__title {
     margin-bottom: 28px;
-    font-size: clamp(38px, 8.6vw, 56px);
-    line-height: 1.16;
+    font-size: clamp(30px, 8.2vw, 46px);
+    line-height: 1.14;
     letter-spacing: -0.045em;
   }
 
@@ -612,7 +638,29 @@
 }
 
 @media (max-width: 480px) {
-  .hero__cta {
-    width: 100%;
+  /* The two buttons share a row, so the title keeps its room. */
+  .hero__actions {
+    gap: 10px;
+    margin-top: 22px;
   }
+
+  .hero__cta,
+  .hero__secondary {
+    flex: 1 1 0;
+    height: 48px;
+    padding: 0 12px;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .hero__rating {
+    flex: 1 1 100%;
+    min-height: 40px;
+  }
+}
+
+/* Once the story is under way the drag hint has done its job. */
+.hero[data-started] .hero-scene__hint {
+  opacity: 0;
+  pointer-events: none;
 }

@@ -163,12 +163,25 @@ lavender, ice, aqua.
   until the first WebGL frame and lines up with it; it stays without WebGL or with Data Saver on.
   three.js starts loading only once the page has loaded and settled: on desktops when the browser is
   idle, on phones at the first touch or scroll (or 4 s after load), so a short visit never pays for it.
+- The hero is short (about 2.8 screens on desktop, less on phones: each title holds for about a third of
+  a screen of scrolling). Along the bottom is a slim chapter strip (a thin bar and label per title, plus
+  the pause button); the drag hint disappears once the story starts. Under the title are two buttons,
+  "Start a project" (/contact) and "See our work" (#work), and Clutch's rating badge, which loads
+  after the page has gone quiet so it never competes with the first paint.
+- The hero's layout: the garden is large and sits right of centre, bleeding off the right edge, with
+  the title low on the left (on phones the garden is above and the title below). The torii and pond
+  are standing from the first screen. The poster is rendered with the same framing and sized with CSS
+  numbers that `scripts/render-poster.mjs` prints; re-run it after changing the framing.
 - The hero is a **scroll story** with no camera moves: the section is several screens tall and its
   stage stays pinned while the visitor scrolls. It opens on the bare plate and pond with the first
-  title centred over it; scrolling builds the garden in stages (torii; rocks and lilies; bridge and
+  title centred over it; scrolling builds the garden in stages (rocks and lilies; bridge and
   pagoda; trees; mountain, waterfall and bamboo; lanterns; deer and koi; the living touches), each
   piece dropping in and settling with a small bounce, its reflection and shadow following. The next
-  title shows in each pause between stages; the last over the finished garden. The tab bar shows the
+  title shows in each pause between stages; the last stage is a jade **dragon** (`scene/dragon.js`, a
+  segmented eastern dragon with a glowing pearl, built from a few instanced meshes) that unfolds out of
+  the torii and then roams the whole width of the screen, off both edges and back, diving through the
+  gate each lap (the route is stretched to the view's width at any size; it isn't built with reduced
+  motion); the last over the finished garden. The tab bar shows the
   titles and scrolls to one when clicked. The poster is the bare plate (the whole garden with reduced
   motion, Data Saver or no WebGL), rendered with the same crop as the scene. With reduced motion
   there's no pin: the whole garden, and the tabs cross-fade the titles.

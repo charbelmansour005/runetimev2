@@ -7,7 +7,11 @@ const SCRIPT = 'https://widget.clutch.co/static/js/widget.js';
 // Our rating on Clutch (their widget, in an iframe). Their script is only
 // fetched when the badge comes near the screen, and is told to look for the
 // badge again after a change of page, since it only scans the page once.
-export default function ClutchBadge() {
+//
+// With `whenIdle` (the hero's, which is on screen straight away) it waits for
+// the page to finish loading and go quiet first, so it never competes with
+// the first paint.
+export default function ClutchBadge({ whenIdle = false }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -28,6 +32,22 @@ export default function ClutchBadge() {
       };
       document.body.appendChild(script);
     };
+    if (whenIdle) {
+      let timer = 0;
+      let idle = 0;
+      const later = () => {
+        timer = window.setTimeout(() => {
+          idle = (window.requestIdleCallback ?? ((fn) => window.setTimeout(fn, 200)))(start, { timeout: 3000 });
+        }, 2500);
+      };
+      if (document.readyState === 'complete') later();
+      else window.addEventListener('load', later, { once: true });
+      return () => {
+        window.removeEventListener('load', later);
+        window.clearTimeout(timer);
+        (window.cancelIdleCallback ?? window.clearTimeout)(idle);
+      };
+    }
     const io = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
@@ -38,7 +58,7 @@ export default function ClutchBadge() {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [whenIdle]);
 
   return (
     <div
