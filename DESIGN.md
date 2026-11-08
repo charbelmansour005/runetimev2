@@ -12,10 +12,10 @@ format so people and AI agents can extend the site without drifting from it. Tok
 - **Mood:** a senior engineering studio. Confident, technical and calm, never playful or mystical.
 - **Signature contrast:** near-black violet heroes and dark bands (`--void`, `--grad-dark`)
   alternate with white and mist content sections.
-- **Hero:** a 3D *miniature Japanese garden* at dusk, built in code with three.js: a vermilion torii
-  gate standing in a pond, reflected in the water, with a pagoda, an arched bridge, stone lanterns and
-  cherry, maple and pine trees on the shore. It's the same on every slide (only the headline changes),
-  and visitors can turn it and zoom in.
+- **Hero:** a cloud of glowing *sparkles* that drift like air and gather into a shape for each slide
+  (a neural network, app screens, a globe with routes, an infinity loop), drawn with three.js. The
+  scroll moves them from one shape to the next. The 3D *miniature Japanese garden* (torii, pagoda,
+  mountain, deer, a dragon) lives on its own page, the playground.
 - **Signature shape:** the angular *shard* (a six-point polygon from the logo's geometry). Use it
   for small accents (icon backs, card corners, decorative layers), never as the main artwork.
 - **Density:** generous. Sections breathe (100px vertical padding on desktop) and copy stays in short
@@ -146,45 +146,29 @@ at least 44px tall on coarse pointers.
 **Shard.** `.shard` with a `--shard-a`/`--shard-b` gradient. Variants: ink, white, lilac, pink,
 lavender, ice, aqua.
 
-**3D garden (hero).**
-- Built from rounded boxes, cylinders and a few extruded shapes (`src/components/hero/scene/`);
-  everything that doesn't move is merged into one mesh per material.
-- Palette: vermilion (`#FF4A1F`) for the gate, pagoda and bridge, with near-black roofs; moss green
-  land, deep blue water, blossom pink and maple red trees, warm lantern light, and a `--violet-light`
-  seam around the base. Vermilion belongs to this scene only: don't use it in the interface.
-- Reflections are the same parts mirrored under the water and faded with depth (no second render).
-- Moving parts: koi, drifting paper lanterns, ripples around the gate's pillars and falling petals.
-  All of it stops with the hero's pause button and with reduced motion.
-- Drag to turn it (all the way round), scroll or pinch to zoom towards the cursor, double-click or Home
-  to reset, arrow keys and +/− when it has focus. It never traps the page: at full zoom-out the wheel
-  scrolls the page, once the page has scrolled it always does, and on touch screens vertical drags
-  scroll. A "Drag to turn" hint shows until the first interaction.
-- A poster (`/hero-poster.webp`, rendered from the scene by `scripts/render-poster.mjs`) is shown
-  until the first WebGL frame and lines up with it; it stays without WebGL or with Data Saver on.
-  three.js starts loading only once the page has loaded and settled: on desktops when the browser is
-  idle, on phones at the first touch or scroll (or 4 s after load), so a short visit never pays for it.
-- The hero is short (about 2.8 screens on desktop, less on phones: each title holds for about a third of
-  a screen of scrolling). Along the bottom is a slim chapter strip (a thin bar and label per title, plus
-  the pause button); the drag hint disappears once the story starts. Under the title are two buttons,
-  "Start a project" (/contact) and "See our work" (#work), and Clutch's rating badge, which loads
-  after the page has gone quiet so it never competes with the first paint.
-- The hero's layout: the garden is large and sits right of centre, bleeding off the right edge, with
-  the title low on the left (on phones the garden is above and the title below). The torii and pond
-  are standing from the first screen. The poster is rendered with the same framing and sized with CSS
-  numbers that `scripts/render-poster.mjs` prints; re-run it after changing the framing.
-- The hero is a **scroll story** with no camera moves: the section is several screens tall and its
-  stage stays pinned while the visitor scrolls. It opens on the bare plate and pond with the first
-  title centred over it; scrolling builds the garden in stages (rocks and lilies; bridge and
-  pagoda; trees; mountain, waterfall and bamboo; lanterns; deer and koi; the living touches), each
-  piece dropping in and settling with a small bounce, its reflection and shadow following. The next
-  title shows in each pause between stages; the last stage is a jade **dragon** (`scene/dragon.js`, a
-  segmented eastern dragon with a glowing pearl, built from a few instanced meshes) that unfolds out of
-  the torii and then roams the whole width of the screen, off both edges and back, diving through the
-  gate each lap (the route is stretched to the view's width at any size; it isn't built with reduced
-  motion); the last over the finished garden. The tab bar shows the
-  titles and scrolls to one when clicked. The poster is the bare plate (the whole garden with reduced
-  motion, Data Saver or no WebGL), rendered with the same crop as the scene. With reduced motion
-  there's no pin: the whole garden, and the tabs cross-fade the titles.
+**Sparkles (hero).**
+- About 8,400 points (4,800 on phones) in one `Points` draw with an additive glow shader
+  (`src/components/hero/ParticleScene.jsx`, shapes in `shapes.js`). Every shape has the same number of
+  points, sorted bottom to top, so any can turn into any other; each particle leaves on its own
+  schedule, so a shape rebuilds from the bottom up, swirling and billowing as it goes.
+- Colours run top to bottom per slide, and the light behind the sculpture takes the colour of the
+  shape being formed. The slides' look (shape, colours, glow) is set in code (`LOOKS`) and can be
+  overridden per slide in the CMS data (`shape`, `from`, `to`, `glow`).
+- Motion: the points twinkle and drift, the sculpture sways, tilts towards the mouse, and the
+  sparkles part around the pointer. The pause button freezes the drifting. With reduced motion it's a
+  still sculpture that changes shape (instantly) with the tabs.
+- A poster (`/hero-poster.webp`, rendered from the scene by `scripts/render-poster.mjs`, which also
+  prints the CSS size to use) shows until the first WebGL frame, then the sparkles gather into the
+  shape from all around. It stays without WebGL or with Data Saver on. three.js starts loading only
+  once the page has loaded and settled: on desktops when the browser is idle, on phones at the first
+  touch or scroll (or 4 s after load), so a short visit never pays for it.
+- The hero is a **scroll story**: the section is about 2.8 screens tall on desktop (less on phones)
+  and its stage stays pinned. Each title holds for about a third of a screen of scrolling; in the
+  pauses between titles the sparkles reshape. The title and the two buttons ("Start a project" →
+  /contact, "See our work" → #work, then Clutch's rating, which loads once the page has gone quiet)
+  are on the left, the sculpture on the right (above the title on phones). Along the bottom is a
+  slim chapter strip (a bar and label per title, plus the pause button) that jumps to a title when
+  clicked. With reduced motion there's no pin and the tabs cross-fade the titles.
 - **Services** turn on a 3D ring while the section is pinned, with a list beside it that follows and
   jumps; **Selected Work** is a stack of sticky project cards, each shrinking back as the next slides
   over. Both are plain layouts with reduced motion. Pin lengths are set in CSS (so links to a section
@@ -199,13 +183,13 @@ lavender, ice, aqua.
   ring that closes to a percentage, a field of 1,000 dots for a large count, figures for a small one).
   Nothing in the pictures is invented; they only draw the stat itself.
 
-- **Playground** (`/playground`): holding the garden still for a second (a ring fills at the pointer;
-  `E` from the keyboard) opens a page that is all garden, to make your own. Every part has a switch;
+- **Playground** (`/playground`, linked from the footer): the 3D garden on a page of its own, to make
+  your own (it was the home hero until November 2026). Every part has a switch;
   single things (a tree, a deer, the torii) can be dragged across the plate, taken away or added; the
   plate can grow; and ponds can be dug, which join the lake where they touch it. Dragging the ground
   still turns the view. The garden is kept in the address (`?off=` for the switches, `?g=` for the
   layout) and in the browser, never on the server. There the garden is built with each thing in
-  meshes of its own (`split`); the hero keeps everything merged, so it draws exactly as before.
+  meshes of its own (`split`).
 
 ## 5. Layout Principles
 
@@ -251,7 +235,7 @@ There's no elevation scale yet. The site has 24 distinct one-off shadows. Use th
   100% client retention and 100K+ monthly users.
 - Give every carousel or auto-advancing element a pause control, and pause it on hover and keyboard focus.
 - Respect `prefers-reduced-motion`: no autoplay, no parallax, and static WebGL frames.
-- Lazy-load heavy visuals. three.js loads only for the hero, once the page has loaded and settled.
+- Lazy-load heavy visuals. three.js loads for the hero's sparkles once the page has loaded and settled, and for the garden only on /playground.
 - Use tokens. Extend `tokens.css` rather than hard-coding colours. There are 165 literal colours
   today, mostly inside mockups.
 

@@ -1,7 +1,7 @@
-// The stills of the 3D garden shown until WebGL draws it, rendered from the
-// scene itself at its starting view (scripts/render-poster.mjs): the bare
-// plate the scroll story starts from, and the whole garden (for reduced
-// motion, Data Saver and browsers without WebGL).
-export const POSTER_SRCSET = '/hero-poster-640.webp 640w, /hero-poster.webp 960w';
-export const BARE_POSTER_SRCSET = '/hero-poster-bare-640.webp 640w, /hero-poster-bare.webp 960w';
-export const POSTER_SIZES = '(max-width: 900px) 79vw, (max-width: 1200px) 60vw, 50vw';
+// The still of the hero's particles, shown until WebGL draws them (and kept
+// without WebGL, with Data Saver on, or for reduced motion). Rendered from the
+// scene itself by scripts/render-poster.mjs. Three sizes, so a phone fetches
+// a small file: the sizes hint says how wide the poster really is on screen
+// (about three quarters of a phone's width, and about half of a desktop's).
+export const POSTER_SRCSET = '/hero-poster-360.webp 360w, /hero-poster-560.webp 560w, /hero-poster.webp 800w';
+export const POSTER_SIZES = '(max-width: 900px) 74vw, 55vw';

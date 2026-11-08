@@ -68,27 +68,6 @@ const POND = [
 const TORII = { x: 0.35, z: -0.1, ry: 0.3, s: 1.2 };
 const BRIDGE = { x: -2.95, z: -2.1, ry: 0.877, length: 1.9 };
 
-// The order the hero's scroll story builds the garden in, by part (parts.js).
-// (The torii and the pond are there from the start, so the first screen
-// isn't an empty slab.)
-const BUILD_ORDER = [
-  ['rocks', 'lilies'],
-  ['bridge', 'pagoda'],
-  ['trees'],
-  ['mountain', 'waterfall', 'bamboo'],
-  ['lanterns', 'boats'],
-  ['deer', 'koi'],
-  ['ripples', 'petals', 'fireflies', 'mist'],
-  ['dragon'],
-];
-// How high something is while it drops in (t from 0 to 1): it falls,
-// lands at 0.8 and bounces once, a little.
-function dropHeight(t) {
-  if (t <= 0 || t >= 1) return 0;
-  if (t < 0.8) return 2.6 * (1 - (t / 0.8) ** 2);
-  return 0.12 * Math.sin(((t - 0.8) / 0.2) * Math.PI);
-}
-
 // The same garden on every visit.
 function seeded(seed) {
   let a = seed;
@@ -1501,24 +1480,6 @@ export async function buildGarden({ pause = async () => {}, split = false, drago
     group,
     // The plate's half-width and half-depth.
     plate,
-    // The hero's scroll story builds the garden: `b` from 0 (the bare plate
-    // and pond) to 1 (everything). Things arrive in stages, a few at a time;
-    // each drops in from above and settles with a little bounce.
-    setBuild(b) {
-      const stages = BUILD_ORDER.map((parts) => [...units.values()].filter((u) => parts.includes(u.part) && !u.added));
-      stages.forEach((members, s) => {
-        const local = b * stages.length - s;
-        members.forEach((owner, j) => {
-          const t = Math.min(Math.max((local - (j / Math.max(members.length, 1)) * 0.45) / 0.55, 0), 1);
-          if (t === owner.arrive) return;
-          owner.arrive = t;
-          // (The dragon unfolds out of the torii instead of dropping in.)
-          owner.dy = owner.part === 'dragon' ? 0 : dropHeight(t);
-          place(owner);
-        });
-      });
-      syncHalos();
-    },
     // Shows or hides a whole part (see parts.js), and whatever depends on it.
     setVisible(id, on) {
       shown.set(id, on);

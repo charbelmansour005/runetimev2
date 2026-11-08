@@ -2,8 +2,7 @@
   position: relative;
   background: var(--void);
   color: var(--white);
-  /* Dragging turns the garden and swipes change the slide: neither should
-     select the words. */
+  /* Swipes and drags shouldn't select the words. */
   -webkit-user-select: none;
   user-select: none;
 }
@@ -53,9 +52,9 @@
   background: var(--grad-hero);
 }
 
-/* Depth behind everything: a wash of violet light from the garden's side and
+/* Depth behind everything: a wash of violet light from the sculpture's side and
    a fine dot grid that fades out towards the edges. It drifts a little as the
-   hero scrolls away (Hero.jsx), slower than the garden. */
+   hero scrolls away (Hero.jsx). */
 .hero__texture {
   position: absolute;
   inset: -6% 0;
@@ -76,11 +75,6 @@
   mask-image: radial-gradient(75% 70% at 68% 45%, #000 0%, transparent 78%);
 }
 
-.hero-scene canvas {
-  width: 100%;
-  height: 100%;
-}
-
 .hero__progress {
   position: absolute;
   inset: 0 0 auto;
@@ -97,167 +91,42 @@
   transform-origin: left center;
 }
 
-/* ---------- Art: the 3D garden ---------- */
+/* ---------- Art: the sparkles ---------- */
 
 .hero__art {
   position: absolute;
   top: 0;
   right: 0;
   bottom: 0;
-  /* The garden has the whole stage; the titles come and go over it. */
-  width: 100%;
+  /* The sculpture takes the right of the stage; the title is on the left. */
+  width: 62%;
   pointer-events: none;
 }
 
 .hero__sculpture,
-.hero-scene,
-.hero-scene__canvas {
+.particles,
+.particles__canvas {
   position: absolute;
   inset: 0;
 }
 
-/* The poster below is sized against this box, like the 3D scene's camera. */
+/* The poster below is sized against this box, like the scene's camera. */
 .hero__sculpture {
   container-type: size;
 }
 
-/* Visitors can turn the garden by dragging and zoom it with the wheel or a
-   pinch. On touch screens, vertical drags still scroll the page. */
-.hero-scene.is-ready .hero-scene__canvas {
-  pointer-events: auto;
-  cursor: grab;
-  touch-action: pan-y;
-}
-
-/* The garden (and the dragon, which roams the whole width of the screen)
-   fades out only under the header, instead of ending in a hard edge. */
-.hero-scene__canvas {
-  -webkit-mask-image: linear-gradient(to bottom, transparent 2%, #000 10%);
-  mask-image: linear-gradient(to bottom, transparent 2%, #000 10%);
-}
-
-/* Hold to edit: a ring that fills at the pointer while the garden is held. */
-.hero-hold {
-  position: absolute;
-  z-index: 2;
-  width: 56px;
-  height: 56px;
-  margin: -28px 0 0 -28px;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.hero-hold svg {
+.particles canvas {
   width: 100%;
   height: 100%;
-  transform: rotate(-90deg);
-  fill: rgba(13, 0, 22, 0.35);
-  stroke: var(--white);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-dasharray: 126;
-  stroke-dashoffset: 126;
 }
 
-/* Nothing shows for the first moment, so a click or the start of a drag
-   doesn't flash it. */
-.hero-hold.is-on {
-  animation: hold-show 0.15s 0.15s linear forwards;
-}
-
-.hero-hold.is-on svg {
-  animation: hold-fill 0.85s 0.15s linear forwards;
-}
-
-@keyframes hold-show {
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes hold-fill {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-.hero-scene__canvas {
-  -webkit-touch-callout: none;
-}
-
-.hero-scene__canvas.is-dragging {
-  cursor: grabbing;
-}
-
-.hero-scene:focus-visible {
-  outline: 2px solid var(--violet-light);
-  outline-offset: -8px;
-  border-radius: 24px;
-}
-
-.hero-scene__hint {
-  position: absolute;
-  /* Under the garden, which sits right of centre. */
-  left: 62%;
-  bottom: 78px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px 7px 10px;
-  border: 1px solid var(--glass-stroke);
-  border-radius: 999px;
-  background: var(--glass-fill);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  white-space: nowrap;
-  transform: translateX(-50%);
-  pointer-events: none;
-  animation: hero-hint-in 0.6s 0.8s var(--ease-out-3) both;
-  transition: opacity 0.4s;
-}
-
-.hero-scene.is-touched .hero-scene__hint {
-  opacity: 0;
-}
-
-.hero-scene__hint svg {
-  width: 16px;
-  height: 16px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-}
-
-@keyframes hero-hint-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 8px);
-  }
-}
-
-@media (hover: hover) {
-  .hero-scene__hint-touch {
-    display: none;
-  }
-}
-
-@media (hover: none) {
-  .hero-scene__hint-mouse {
-    display: none;
-  }
-}
-
-/* Soft light behind the garden. */
+/* Soft light behind the sparkles, in the colour of the shape they're forming
+   (Hero.jsx sets the two colours and how far it's blended). */
 .hero__glow {
-  --glow: #8b6bff;
+  --glow: color-mix(in srgb, var(--glow-a, #e36bff), var(--glow-b, #e36bff) calc(var(--glow-t, 0) * 100%));
   position: absolute;
   left: 50%;
-  top: 45%;
+  top: 50%;
   width: min(80%, 84vh);
   aspect-ratio: 1;
   border-radius: 50%;
@@ -270,22 +139,21 @@
   );
 }
 
-/* A still of the garden, shown until the WebGL scene is ready. It's centred
-   where the scene's camera aims (45% down) and scales the way the camera
-   frames the garden: with the width of the box, or its height once the box is
-   about as wide as it is tall. Rendered by the scene itself, so the two line up. */
+/* A still of the sparkles, shown until the WebGL scene is ready. It's centred
+   where the scene's camera aims and scales the way the camera frames the
+   sculpture: with the width of the box, or its height once the box is about
+   as wide as it is tall. Rendered by the scene itself (scripts/render-poster.mjs
+   prints the numbers), so the two line up. */
 .hero__poster {
   position: absolute;
-  left: 62%;
+  left: 50%;
   top: 50%;
-  /* Sized like the scene: its width is set by whichever of the canvas's
-     width and height fits the garden (numbers from scripts/render-poster.mjs). */
-  width: min(108.05cqw, 103.14cqh);
+  width: min(102.96cqw, 88.22cqh);
   height: auto;
   max-width: none;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  transition: opacity 1.2s ease;
+  transition: opacity 1.4s ease;
 }
 
 .hero__poster.is-hidden {
@@ -300,21 +168,21 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;
+  justify-content: center;
   height: 100%;
   padding-top: var(--header-h);
-  padding-bottom: 92px;
+  padding-bottom: 84px;
   pointer-events: none;
 }
 
-/* The title sits low on the left; the garden has the rest of the stage. */
+/* The title is on the left, vertically centred; the sparkles have the rest. */
 .hero__slides {
   display: grid;
-  width: min(100%, 600px);
+  width: min(100%, 640px);
 }
 
 /* Only the words and the button take the pointer: the space around them
-   belongs to the garden behind, so it can be dragged. */
+   belongs to the sculpture behind. */
 .hero__line,
 .hero__cta {
   pointer-events: auto;
@@ -326,8 +194,8 @@
   justify-self: start;
 }
 
-/* A soft dark wash behind each title, so it reads over the garden. It's
-   part of the title, so it leaves with it and the garden shows at full
+/* A soft dark wash behind each title, so it reads over the sparkles. It's
+   part of the title, so it leaves with it and the sparkles show at full
    brightness between titles. */
 .hero__slide {
   position: relative;
@@ -419,7 +287,7 @@
 .hero__title {
   margin-bottom: 0;
   color: var(--white);
-  font-size: clamp(34px, 3.8vw, 60px);
+  font-size: clamp(36px, 4.4vw, 66px);
   font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.05em;
@@ -538,7 +406,7 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1200px) {
-  /* Narrower, the title shrinks so the garden keeps its share of the stage. */
+  /* Narrower, the title shrinks so the sculpture keeps its share of the stage. */
   .hero__title {
     font-size: clamp(30px, 3.6vw, 44px);
   }
@@ -549,31 +417,15 @@
     width: 100%;
   }
 
-  /* The garden fills the stage between the header and the tabs. */
+  /* The sparkles take the upper part of the stage; the title and buttons
+     are below them. */
   .hero__sculpture {
     top: var(--header-h);
-    bottom: 90px;
-  }
-
-  .hero__poster {
-    left: 50%;
-    top: 44%;
-    width: min(105.62cqw, 91.9cqh);
-  }
-
-  /* Above the garden here: the headline fills the space below it. */
-  .hero-scene__hint {
-    left: 50%;
-    top: 6px;
-    bottom: auto;
-  }
-
-  .hero-scene__canvas {
-    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent);
-    mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 86%, transparent);
+    bottom: 50%;
   }
 
   .hero__content {
+    justify-content: flex-end;
     padding-bottom: 90px;
   }
 
@@ -659,8 +511,3 @@
   }
 }
 
-/* Once the story is under way the drag hint has done its job. */
-.hero[data-started] .hero-scene__hint {
-  opacity: 0;
-  pointer-events: none;
-}

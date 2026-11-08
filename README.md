@@ -110,12 +110,13 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
 - `src/content/` — loads content from the API for the site.
 - `src/components/` — site sections; `src/scrollStage.js` drives the pinned, scroll-driven pieces (hero story,
   services ring, stacked work cards); `src/components/hero/` — the hero's scroll story (`Hero.jsx`; it also decides when the 3D scene starts: after the page has loaded and settled, and on phones
-  at the first touch or scroll) and the 3D garden (`HeroScene.jsx`; `scene/garden.js` builds the model
-  in code, in slices of a few milliseconds; `scene/orbit.js` handles drag, wheel, pinch and keyboard;
-  `scene/parts.js` lists the parts a visitor can switch off in the playground).
+  at the first touch or scroll) and its sparkles (`ParticleScene.jsx`, point formations in `shapes.js`);
+  the 3D garden for the playground (`HeroScene.jsx`; `scene/garden.js` builds the model in code, in
+  slices of a few milliseconds; `scene/dragon.js` is its dragon; `scene/orbit.js` handles drag, wheel,
+  pinch and keyboard; `scene/parts.js` lists the parts a visitor can switch off).
 - `src/views/PlaygroundPage.jsx` — `/playground`: the garden full-page, to edit (switch parts off, drag
-  things, add more, grow the plate, dig ponds; `scene/editor.js` handles the dragging); opened by holding
-  the hero's garden. The result is kept in the URL (`?off=`, `?g=`) and `localStorage`.
+  things, add more, grow the plate, dig ponds; `scene/editor.js` handles the dragging); linked from the
+  footer. The result is kept in the URL (`?off=`, `?g=`) and `localStorage`.
 - `src/smoothScroll.js` — the site's wheel scrolling: it glides to where the wheel sends it, with a top speed
   (`MAX_SPEED`). Touch, keyboard and scrollbar scrolling are the browser's own, as is everything with reduced motion.
 - `src/admin/` — the CMS (`schema.jsx` describes every editable field).
@@ -133,9 +134,9 @@ HTTPS — session cookies are HTTPS-only in production. In MongoDB Atlas, allow 
   canonical URLs and the sitemap comes from `VERCEL_PROJECT_PRODUCTION_URL`, or `SITE_URL` to override
   (`siteUrl()` in `server/config.js`).
 - `public/` — favicon and app icons, the social share image (`og.jpg`) and the hero's poster
-  (`hero-poster.webp` and `hero-poster-640.webp`): a still of the 3D garden at its starting view, shown
-  until WebGL draws it. Whenever the garden or its lighting changes, re-render it with the site running
-  locally: `npx -p puppeteer-core node scripts/render-poster.mjs`.
+  (`hero-poster.webp` and `hero-poster-560.webp`): a still of the first sparkle sculpture, shown until
+  WebGL draws it. Whenever the shapes or their look change, re-render it with the site running
+  locally (it also prints the poster's CSS size for `Hero.css`): `npx -p puppeteer-core node scripts/render-poster.mjs`.
 - `DESIGN.md` — the design system (tokens, type, components, do's and don'ts). Read it before adding UI.
 
 ## Security notes

@@ -1,18 +1,18 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
-import { useRouter } from 'next/navigation';
 import ClutchBadge from '../ClutchBadge';
 import ErrorBoundary from '../ErrorBoundary';
 import PageLink from '../PageLink';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
 import { clamp, onScrollFrame, pinProgress, scrollToProgress, smooth } from '../../scrollStage';
-import { BARE_POSTER_SRCSET, POSTER_SIZES, POSTER_SRCSET } from './poster';
+import { lookOf } from './looks';
+import { POSTER_SIZES, POSTER_SRCSET } from './poster';
 import './Hero.css';
 
 // three.js is heavy, so the WebGL layer starts loading only once the page has
 // loaded and settled (see startWebGL).
-const HeroScene = lazy(() => import('./HeroScene'));
+const ParticleScene = lazy(() => import('./ParticleScene'));
 
 // The same curves as the CSS tokens --ease-in-out-2 and --ease-out-3.
 const EASE = 'cubic-bezier(0.45, 0, 0.55, 1)';
@@ -22,13 +22,12 @@ const EASE = 'cubic-bezier(0.45, 0, 0.55, 1)';
 const settled = (animations) => Promise.all(animations.map((a) => a.finished.catch(() => {})));
 
 // The hero's scroll story: each title holds the stage for a while, and
-// between titles the garden is built a little further (garden.js decides
-// what arrives when). Returns how much each title shows, and how far the
-// garden is built (0–1).
-// (Short: each title holds for about a third of a screen's scroll, and the
-// garden builds in the gaps.)
-const HOLD = 1.3;
-const GAP = 1;
+// between titles the sparkles lift off and settle into the next shape.
+// (Short: each title holds for about a third of a screen's scroll.) Returns
+// how much each title shows, and where the particles are between the shapes
+// (0 for the first slide's, up to the number of slides less one).
+const HOLD = 1.2;
+const GAP = 1.3;
 function storyAt(p, n) {
   const total = n * HOLD + (n - 1) * GAP;
   const u = clamp(p / 0.96) * total;
@@ -38,12 +37,9 @@ function storyAt(p, n) {
     const out = i === n - 1 ? 0 : smooth((u - (start + HOLD * 0.7)) / (HOLD * 0.3));
     return { o: into * (1 - out), into, out, fill: clamp((u - start) / (HOLD + GAP)) };
   });
-  let built = 0;
-  for (let i = 0; i < n - 1; i += 1) {
-    const from = i * (HOLD + GAP) + HOLD;
-    built += clamp((u - from) / GAP) / (n - 1);
-  }
-  return { titles, built };
+  let morph = 0;
+  for (let i = 0; i < n - 1; i += 1) morph += clamp((u - (i * (HOLD + GAP) + HOLD)) / GAP);
+  return { titles, morph };
 }
 
 // When to start the 3D scene: the headline, the poster and the rest of the
@@ -94,42 +90,20 @@ export default function Hero() {
   const rootRef = useRef(null);
   const tabRefs = useRef([]);
   const sceneApi = useRef(null);
-  const playingRef = useRef(true);
   const controls = useRef({ go: () => {}, setPlaying: () => {} });
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [artReady, setArtReady] = useState(false);
   const [webgl, setWebgl] = useState(false);
-  // The whole garden's poster instead of the bare plate: one slide (no
-  // story), Data Saver, or no WebGL to build it with.
-  const [whole, setWhole] = useState(slides.length < 2);
-  const onSceneFail = useCallback(() => setWhole(true), []);
   const posterRef = useRef(null);
-  // Re-runs the story's update, so a scene that has just appeared is pointed
-  // where the scroll says.
-  const aimRef = useRef(null);
-  // How far the story has built the garden, for a scene that's just loaded.
-  const buildRef = useRef(null);
-  // (`?poster=bare` shows the bare plate even with reduced motion: that's
-  // how scripts/render-poster.mjs draws the story's poster.)
-  const buildAt = useCallback(() => {
-    if (new URLSearchParams(window.location.search).get('poster') === 'bare') return 0;
-    return buildRef.current?.() ?? 1;
-  }, []);
-  const onSceneReady = useCallback(() => {
-    setArtReady(true);
-    aimRef.current?.();
-  }, []);
-  // Holding the garden opens the playground, where its parts can be switched off.
-  const router = useRouter();
-  const openPlayground = useCallback(() => router.push('/playground'), [router]);
-  const warmPlayground = useCallback(() => router.prefetch('/playground'), [router]);
+  // Where the story has the particles, for a scene that's just loaded.
+  const morphRef = useRef(null);
+  const morphAt = useCallback(() => morphRef.current?.() ?? 0, []);
+  const onSceneReady = useCallback(() => setArtReady(true), []);
+  const looks = slides.map((slide, i) => lookOf(slide, i));
 
   useEffect(() => {
-    if (navigator.connection?.saveData) {
-      setWhole(true);
-      return undefined; // The poster stays.
-    }
+    if (navigator.connection?.saveData) return undefined; // The poster stays.
     return startWebGL(posterRef.current, () => setWebgl(true));
   }, []);
 
@@ -145,12 +119,21 @@ export default function Hero() {
     let alive = true;
     let current = 0;
 
-    // The pause button stops the garden's own animation (the slides follow
-    // the scroll, so they have nothing to pause). Reduced motion starts it paused.
+    // The pause button freezes the sparkles' drifting (the slides follow the
+    // scroll, so they have nothing to pause). Reduced motion starts it paused.
     const sync = (play) => {
-      playingRef.current = play;
       sceneApi.current?.setPlaying(play);
     };
+    // The light behind the particles takes the colour of the shape they are
+    // forming, blending to the next one as they move.
+    const light = (m) => {
+      const s = Math.min(Math.floor(m), Math.max(n - 2, 0));
+      const next = Math.min(s + 1, n - 1);
+      root.style.setProperty('--glow-a', looks[s].glow);
+      root.style.setProperty('--glow-b', looks[next].glow);
+      root.style.setProperty('--glow-t', n > 1 ? smooth(m - s).toFixed(3) : '0');
+    };
+    light(0);
     setPlaying(!reduced);
     sync(!reduced);
 
@@ -163,14 +146,14 @@ export default function Hero() {
     };
 
     // The story: the hero is pinned for a few screens, and scrolling through
-    // it moves from one headline to the next while the camera flies round the
-    // garden. Without it (reduced motion, or one slide), the tabs cross-fade.
+    // it moves from one headline to the next while the sparkles change shape.
+    // Without it (reduced motion, or one slide), the tabs cross-fade.
     const story = !reduced && n > 1;
     let go;
     if (story) {
       const update = () => {
         const p = pinProgress(root);
-        const { titles, built } = storyAt(p, n);
+        const { titles, morph } = storyAt(p, n);
         slideEls.forEach((el, i) => {
           const { o, into, out } = titles[i];
           el.style.opacity = o;
@@ -184,22 +167,19 @@ export default function Hero() {
         });
         show(on);
         progress.style.transform = `scaleX(${p})`;
-        // The hint about dragging has done its job once the story is under way.
-        root.toggleAttribute('data-started', p > 0.01);
         fills.forEach((el, i) => {
           el.style.transform = `scaleX(${titles[i].fill})`;
         });
-        sceneApi.current?.build?.(built);
+        sceneApi.current?.setMorph(morph);
+        light(morph);
       };
       cleanups.push(onScrollFrame(update));
-      // The scene may arrive later: point it straight away when it does.
-      aimRef.current = update;
       // A tab scrolls to where its title is fully in view.
       go = (next) => {
         const total = n * HOLD + (n - 1) * GAP;
         scrollToProgress(root, ((next * (HOLD + GAP) + HOLD * 0.45) / total) * 0.96);
       };
-      buildRef.current = () => storyAt(pinProgress(root), n).built;
+      morphRef.current = () => storyAt(pinProgress(root), n).morph;
     } else {
       // Cross-fade, opacity only.
       let busy = false;
@@ -211,11 +191,25 @@ export default function Hero() {
         await settled([out]);
         if (!alive) return;
         show(next);
+        sceneApi.current?.setMorph(next);
+        light(next);
         out.cancel();
         await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE })]);
         busy = false;
       };
     }
+
+    // The sparkles part around the pointer and the sculpture tilts towards it.
+    const onMove = (e) => {
+      if (e.pointerType === 'mouse') sceneApi.current?.setPointer(e.clientX, e.clientY);
+    };
+    const onLeave = () => sceneApi.current?.setPointer(null);
+    root.addEventListener('pointermove', onMove, { passive: true });
+    root.addEventListener('pointerleave', onLeave);
+    cleanups.push(() => {
+      root.removeEventListener('pointermove', onMove);
+      root.removeEventListener('pointerleave', onLeave);
+    });
 
     controls.current = {
       go,
@@ -227,8 +221,7 @@ export default function Hero() {
 
     return () => {
       alive = false;
-      aimRef.current = null;
-      buildRef.current = null;
+      morphRef.current = null;
       cleanups.forEach((fn) => fn());
       root.getAnimations?.({ subtree: true }).forEach((a) => a.cancel());
     };
@@ -358,36 +351,23 @@ export default function Hero() {
       <div className="hero__art">
         <div className="hero__sculpture">
           <div className="hero__glow" aria-hidden="true" />
-          {/* Shown until the 3D garden takes over, and kept without WebGL. The
-              scroll story starts from the bare plate; with reduced motion, or
-              when the garden can't be drawn, it's the whole garden. */}
-          <picture>
-            {!whole && <source media="(prefers-reduced-motion: reduce)" srcSet={POSTER_SRCSET} sizes={POSTER_SIZES} />}
-            <img
-              ref={posterRef}
-              className={`hero__poster${artReady ? ' is-hidden' : ''}`}
-              src={whole ? '/hero-poster.webp' : '/hero-poster-bare.webp'}
-              srcSet={whole ? POSTER_SRCSET : BARE_POSTER_SRCSET}
-              sizes={POSTER_SIZES}
-              alt=""
-              width="960"
-              height="805"
-              fetchPriority="high"
-            />
-          </picture>
+          {/* The sparkles' still: shown until they're drawn, and kept without
+              WebGL or with Data Saver on. */}
+          <img
+            ref={posterRef}
+            className={`hero__poster${artReady ? ' is-hidden' : ''}`}
+            src="/hero-poster.webp"
+            srcSet={POSTER_SRCSET}
+            sizes={POSTER_SIZES}
+            alt=""
+            width="800"
+            height="596"
+            fetchPriority="high"
+          />
           {webgl && (
             <ErrorBoundary>
               <Suspense fallback={null}>
-                <HeroScene
-                  apiRef={sceneApi}
-                  playingRef={playingRef}
-                  onReady={onSceneReady}
-                  onHold={openPlayground}
-                  split
-                  buildAt={buildAt}
-                  onFail={onSceneFail}
-                  onHoldStart={warmPlayground}
-                />
+                <ParticleScene apiRef={sceneApi} slides={slides} onReady={onSceneReady} morphAt={morphAt} />
               </Suspense>
             </ErrorBoundary>
           )}
