@@ -13,8 +13,9 @@ format so people and AI agents can extend the site without drifting from it. Tok
 - **Signature contrast:** near-black violet heroes and dark bands (`--void`, `--grad-dark`)
   alternate with white and mist content sections.
 - **Hero:** a cloud of glowing *sparkles* that drift like air and gather into a shape for each slide
-  (a neural network, app screens, a globe with routes, an infinity loop), drawn with three.js. The
-  scroll moves them from one shape to the next. The 3D *miniature Japanese garden* (torii, pagoda,
+  (a neural network, app screens, a globe with routes, an infinity loop), drawn with three.js. They
+  reform by themselves when the slide changes (the hero is a timed slideshow, not scroll-driven). The
+  3D *miniature Japanese garden* (torii, pagoda,
   mountain, deer, a dragon) lives on its own page, the playground.
 - **Signature shape:** the angular *shard* (a six-point polygon from the logo's geometry). Use it
   for small accents (icon backs, card corners, decorative layers), never as the main artwork.
@@ -162,13 +163,15 @@ lavender, ice, aqua.
   shape from all around. It stays without WebGL or with Data Saver on. three.js starts loading only
   once the page has loaded and settled: on desktops when the browser is idle, on phones at the first
   touch or scroll (or 4 s after load), so a short visit never pays for it.
-- The hero is a **scroll story**: the section is about 2.8 screens tall on desktop (less on phones)
-  and its stage stays pinned. Each title holds for about a third of a screen of scrolling; in the
-  pauses between titles the sparkles reshape. The title and the two buttons ("Start a project" →
-  /contact, "See our work" → #work, then Clutch's rating, which loads once the page has gone quiet)
-  are on the left, the sculpture on the right (above the title on phones). Along the bottom is a
-  slim chapter strip (a bar and label per title, plus the pause button) that jumps to a title when
-  clicked. With reduced motion there's no pin and the tabs cross-fade the titles.
+- The hero is a **timed slideshow**, one screen tall: each slide shows for 8 seconds (a thin bar
+  along the top and the active chapter's bar fill meanwhile), then the headline fades out, the next
+  fades in, and the sparkles lift off and swirl into the next shape. It holds while the visitor hovers
+  the copy or the strip or has keyboard focus inside it, and when they press pause (which freezes
+  the sparkles' drifting too); swipes change slide on touch screens. The title and the two buttons
+  ("Start a project" → /contact, "See our work" → #work, then Clutch's rating, which loads once the
+  page has gone quiet) are on the left, the sculpture on the right (above the title on phones). Along
+  the bottom is a slim chapter strip (a bar and label per slide, plus the pause button) that jumps to
+  a slide when clicked. With reduced motion it starts paused and the headlines cross-fade.
 - **Services** turn on a 3D ring while the section is pinned, with a list beside it that follows and
   jumps; **Selected Work** is a stack of sticky project cards, each shrinking back as the next slides
   over. Both are plain layouts with reduced motion. Pin lengths are set in CSS (so links to a section

@@ -5,7 +5,6 @@ import ErrorBoundary from '../ErrorBoundary';
 import PageLink from '../PageLink';
 import { useContent } from '../../content/ContentProvider';
 import { itemKey } from '../../content/format';
-import { clamp, onScrollFrame, pinProgress, scrollToProgress, smooth } from '../../scrollStage';
 import { lookOf } from './looks';
 import { POSTER_SIZES, POSTER_SRCSET } from './poster';
 import './Hero.css';
@@ -14,33 +13,14 @@ import './Hero.css';
 // loaded and settled (see startWebGL).
 const ParticleScene = lazy(() => import('./ParticleScene'));
 
+const SLIDE_SECONDS = 8;
 // The same curves as the CSS tokens --ease-in-out-2 and --ease-out-3.
 const EASE = 'cubic-bezier(0.45, 0, 0.55, 1)';
+const EASE_OUT = 'cubic-bezier(0.33, 1, 0.68, 1)';
 
 // Resolves when the animation has finished or been cancelled (`finished`
 // rejects on cancel, which here is never an error).
 const settled = (animations) => Promise.all(animations.map((a) => a.finished.catch(() => {})));
-
-// The hero's scroll story: each title holds the stage for a while, and
-// between titles the sparkles lift off and settle into the next shape.
-// (Short: each title holds for about a third of a screen's scroll.) Returns
-// how much each title shows, and where the particles are between the shapes
-// (0 for the first slide's, up to the number of slides less one).
-const HOLD = 1.2;
-const GAP = 1.3;
-function storyAt(p, n) {
-  const total = n * HOLD + (n - 1) * GAP;
-  const u = clamp(p / 0.96) * total;
-  const titles = Array.from({ length: n }, (_, i) => {
-    const start = i * (HOLD + GAP);
-    const into = i === 0 ? 1 : smooth((u - start) / (HOLD * 0.3));
-    const out = i === n - 1 ? 0 : smooth((u - (start + HOLD * 0.7)) / (HOLD * 0.3));
-    return { o: into * (1 - out), into, out, fill: clamp((u - start) / (HOLD + GAP)) };
-  });
-  let morph = 0;
-  for (let i = 0; i < n - 1; i += 1) morph += clamp((u - (i * (HOLD + GAP) + HOLD)) / GAP);
-  return { titles, morph };
-}
 
 // When to start the 3D scene: the headline, the poster and the rest of the
 // page come first. Phones wait for the visitor's first touch or scroll (or a
@@ -96,9 +76,9 @@ export default function Hero() {
   const [artReady, setArtReady] = useState(false);
   const [webgl, setWebgl] = useState(false);
   const posterRef = useRef(null);
-  // Where the story has the particles, for a scene that's just loaded.
-  const morphRef = useRef(null);
-  const morphAt = useCallback(() => morphRef.current?.() ?? 0, []);
+  // The slide on show, for a scene that's just loaded.
+  const slideRef = useRef(0);
+  const slideAt = useCallback(() => slideRef.current, []);
   const onSceneReady = useCallback(() => setArtReady(true), []);
   const looks = slides.map((slide, i) => lookOf(slide, i));
 
@@ -113,90 +93,113 @@ export default function Hero() {
     const cleanups = [];
     const q = (selector) => [...root.querySelectorAll(selector)];
     const slideEls = q('.hero__slide');
+    const [slidesEl] = q('.hero__slides');
     const [progress] = q('.hero__progress-fill');
     const fills = q('.hero-tab__fill');
     const n = slides.length;
     let alive = true;
     let current = 0;
 
-    // The pause button freezes the sparkles' drifting (the slides follow the
-    // scroll, so they have nothing to pause). Reduced motion starts it paused.
-    const sync = (play) => {
-      sceneApi.current?.setPlaying(play);
+    let busy = false;
+    let queued = null;
+    let progressAnims = [];
+    let glowToken = 0;
+
+    // Rotation stops while the visitor reads (hovering the copy or the tabs,
+    // or keyboard focus inside the hero) and whenever they press pause. The
+    // pause button freezes the sparkles' drifting too. It starts paused when
+    // they've asked for reduced motion.
+    const hold = { user: reduced, hover: false, focus: false };
+    const sync = () => {
+      const held = hold.user || hold.hover || hold.focus;
+      for (const a of progressAnims) {
+        if (held) a.pause();
+        else if (a.playState === 'paused') a.play();
+      }
+      slidesEl.setAttribute('aria-live', held ? 'polite' : 'off');
+      sceneApi.current?.setPlaying(!hold.user);
     };
+    setPlaying(!hold.user);
+
     // The light behind the particles takes the colour of the shape they are
-    // forming, blending to the next one as they move.
-    const light = (m) => {
-      const s = Math.min(Math.floor(m), Math.max(n - 2, 0));
-      const next = Math.min(s + 1, n - 1);
-      root.style.setProperty('--glow-a', looks[s].glow);
-      root.style.setProperty('--glow-b', looks[next].glow);
-      root.style.setProperty('--glow-t', n > 1 ? smooth(m - s).toFixed(3) : '0');
+    // forming, fading from the last one's.
+    const light = (from, to) => {
+      glowToken += 1;
+      const token = glowToken;
+      root.style.setProperty('--glow-a', looks[from].glow);
+      root.style.setProperty('--glow-b', looks[to].glow);
+      if (reduced || from === to) {
+        root.style.setProperty('--glow-t', '1');
+        return;
+      }
+      const start = performance.now();
+      const step = (now) => {
+        if (token !== glowToken || !alive) return;
+        const k = Math.min(1, (now - start) / 1400);
+        root.style.setProperty('--glow-t', (k * k * (3 - 2 * k)).toFixed(3));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      root.style.setProperty('--glow-t', '0');
+      requestAnimationFrame(step);
     };
-    light(0);
-    setPlaying(!reduced);
-    sync(!reduced);
+    light(0, 0);
+
+    // The bars fill over the slide's time; when they're full, the next slide.
+    const schedule = (i) => {
+      progressAnims = [progress, fills[i]].map((el) =>
+        el.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], {
+          duration: SLIDE_SECONDS * 1000,
+          easing: 'linear',
+          fill: 'both',
+        }),
+      );
+      const [bar] = progressAnims;
+      bar.finished.then(() => alive && bar === progressAnims[0] && go((i + 1) % n)).catch(() => {});
+      sync();
+    };
+
+    // Empties the bars quickly, from wherever they are, before a change.
+    const rewind = () => {
+      for (const a of progressAnims) {
+        const el = a.effect.target;
+        const from = getComputedStyle(el).transform;
+        a.cancel();
+        el.animate([{ transform: from }, { transform: 'scaleX(0)' }], { duration: 350, easing: EASE_OUT }).finished.catch(() => {});
+      }
+      progressAnims = [];
+    };
 
     // Moves `is-active` (and with it focus order and what screen readers
-    // read) to another slide at once.
-    const show = (next) => {
-      if (next === current) return;
-      current = next;
-      flushSync(() => setActive(next));
-    };
+    // read) to the next slide at once.
+    const show = (next) => flushSync(() => setActive(next));
 
-    // The story: the hero is pinned for a few screens, and scrolling through
-    // it moves from one headline to the next while the sparkles change shape.
-    // Without it (reduced motion, or one slide), the tabs cross-fade.
-    const story = !reduced && n > 1;
-    let go;
-    if (story) {
-      const update = () => {
-        const p = pinProgress(root);
-        const { titles, morph } = storyAt(p, n);
-        slideEls.forEach((el, i) => {
-          const { o, into, out } = titles[i];
-          el.style.opacity = o;
-          el.style.visibility = o > 0.002 ? 'visible' : 'hidden';
-          el.style.transform = `translate3d(0, ${(1 - into) * 40 - out * 40}px, 0) scale(${0.97 + 0.03 * o})`;
-        });
-        // The tabs (and screen readers) follow the title the story is on.
-        let on = 0;
-        titles.forEach((t, i) => {
-          if (t.fill > 0) on = i;
-        });
-        show(on);
-        progress.style.transform = `scaleX(${p})`;
-        fills.forEach((el, i) => {
-          el.style.transform = `scaleX(${titles[i].fill})`;
-        });
-        sceneApi.current?.setMorph(morph);
-        light(morph);
-      };
-      cleanups.push(onScrollFrame(update));
-      // A tab scrolls to where its title is fully in view.
-      go = (next) => {
-        const total = n * HOLD + (n - 1) * GAP;
-        scrollToProgress(root, ((next * (HOLD + GAP) + HOLD * 0.45) / total) * 0.96);
-      };
-      morphRef.current = () => storyAt(pinProgress(root), n).morph;
-    } else {
-      // Cross-fade, opacity only.
-      let busy = false;
-      go = async (next) => {
-        if (n < 2 || next === current || busy) return;
-        busy = true;
-        const prev = current;
-        const out = slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' });
-        await settled([out]);
-        if (!alive) return;
-        show(next);
-        sceneApi.current?.setMorph(next);
-        light(next);
-        out.cancel();
-        await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 400, easing: EASE })]);
-        busy = false;
-      };
+    // The headline fades out and the next one fades in (opacity only, so the
+    // browser runs it on the compositor) while the sparkles reform.
+    async function go(next) {
+      if (n < 2 || next === current) return;
+      if (busy) {
+        queued = next; // Picked mid-transition: show it right after.
+        return;
+      }
+      busy = true;
+      rewind();
+      const prev = current;
+      sceneApi.current?.setSlide(next);
+      slideRef.current = next;
+      light(prev, next);
+      const out = slideEls[prev].animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: EASE, fill: 'both' });
+      await settled([out]);
+      if (!alive) return;
+      show(next);
+      current = next; // What the tab bar shows is what picks and swipes count from.
+      out.cancel(); // Hidden now; back to full for its next turn.
+      await settled([slideEls[next].animate([{ opacity: 0 }, { opacity: 1 }], { duration: 450, easing: EASE })]);
+      if (!alive) return;
+      busy = false;
+      const target = queued;
+      queued = null;
+      if (target !== null && target !== next) go(target);
+      else schedule(next);
     }
 
     // The sparkles part around the pointer and the sculpture tilts towards it.
@@ -214,14 +217,66 @@ export default function Hero() {
     controls.current = {
       go,
       setPlaying: (play) => {
+        hold.user = !play;
         setPlaying(play);
-        sync(play);
+        sync();
       },
     };
 
+    const holdHover = (value) => {
+      hold.hover = value;
+      sync();
+    };
+    const holdFocus = (value) => {
+      hold.focus = value;
+      sync();
+    };
+    q('.hero__slides, .hero__tabbar').forEach((el) => {
+      const enter = (e) => e.pointerType === 'mouse' && holdHover(true);
+      const leave = (e) => e.pointerType === 'mouse' && holdHover(false);
+      el.addEventListener('pointerenter', enter);
+      el.addEventListener('pointerleave', leave);
+      cleanups.push(() => {
+        el.removeEventListener('pointerenter', enter);
+        el.removeEventListener('pointerleave', leave);
+      });
+    });
+    // Only keyboard focus holds the slide; a mouse click on a tab shouldn't.
+    const focusIn = (e) => e.target.matches(':focus-visible') && holdFocus(true);
+    const focusOut = (e) => !root.contains(e.relatedTarget) && holdFocus(false);
+    root.addEventListener('focusin', focusIn);
+    root.addEventListener('focusout', focusOut);
+    cleanups.push(() => {
+      root.removeEventListener('focusin', focusIn);
+      root.removeEventListener('focusout', focusOut);
+    });
+
+    // Swipe between slides on touch screens (mostly-horizontal swipes only).
+    let touch = null;
+    const touchStart = (e) => {
+      touch = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
+    const touchEnd = (e) => {
+      if (!touch) return;
+      const dx = e.changedTouches[0].clientX - touch.x;
+      const dy = e.changedTouches[0].clientY - touch.y;
+      touch = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      go(dx < 0 ? (current + 1) % n : (current - 1 + n) % n);
+    };
+    root.addEventListener('touchstart', touchStart, { passive: true });
+    root.addEventListener('touchend', touchEnd, { passive: true });
+    cleanups.push(() => {
+      root.removeEventListener('touchstart', touchStart);
+      root.removeEventListener('touchend', touchEnd);
+    });
+
+    // The first slide is already on screen (it comes with the page); the
+    // slideshow starts from it. One slide alone has nowhere to go.
+    if (n > 1) schedule(0);
+
     return () => {
       alive = false;
-      morphRef.current = null;
       cleanups.forEach((fn) => fn());
       root.getAnimations?.({ subtree: true }).forEach((a) => a.cancel());
     };
@@ -246,9 +301,8 @@ export default function Hero() {
       className="hero"
       id="top"
       ref={rootRef}
+      aria-roledescription="carousel"
       aria-label="What we do"
-      style={{ '--chapters': slides.length }}
-      data-story={slides.length > 1 ? '' : undefined}
     >
       <div className="hero__stage">
       <h1 className="sr-only">
@@ -367,7 +421,7 @@ export default function Hero() {
           {webgl && (
             <ErrorBoundary>
               <Suspense fallback={null}>
-                <ParticleScene apiRef={sceneApi} slides={slides} onReady={onSceneReady} morphAt={morphAt} />
+                <ParticleScene apiRef={sceneApi} slides={slides} onReady={onSceneReady} slideAt={slideAt} />
               </Suspense>
             </ErrorBoundary>
           )}

@@ -7,9 +7,7 @@
   user-select: none;
 }
 
-/* Everything in the hero sits on a stage one screen tall. In the scroll
-   story the hero itself is several screens tall and the stage stays pinned
-   while the visitor scrolls through it (Hero.jsx moves the story along). */
+/* Everything in the hero sits on a stage one screen tall. */
 .hero__stage {
   position: relative;
   isolation: isolate;
@@ -17,32 +15,6 @@
   height: 100svh;
   min-height: 700px;
   overflow: hidden;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .hero[data-story] {
-    height: calc(100svh + var(--chapters) * 45svh);
-  }
-
-  .hero[data-story] .hero__stage {
-    position: sticky;
-    top: 0;
-  }
-
-  /* The story shows and hides the slides itself. */
-  .hero[data-story] .hero__slide:not(.is-active) {
-    visibility: visible;
-  }
-
-  .hero[data-story] .hero__slide:not(:first-child) {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
-  .hero[data-story] {
-    height: calc(100svh + var(--chapters) * 34svh);
-  }
 }
 
 .hero__bg {

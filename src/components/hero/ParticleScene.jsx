@@ -113,26 +113,25 @@ const FILL_H = 0.58;
 const FILL_W = 0.8;
 const BASE_Y = 0.08;
 const INTRO_SECONDS = 2.6;
+const MORPH_SECONDS = 1.9;
+const COLOUR_SECONDS = 1.2;
 
-const smooth = (v) => {
-  const k = Math.min(Math.max(v, 0), 1);
-  return k * k * (3 - 2 * k);
-};
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+const easeInOutQuad = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
 // CMS colours go to the shader as written, so particles match their swatches.
 const toColor = (hex, fallback) => new THREE.Color().setStyle(hex || fallback, THREE.LinearSRGBColorSpace);
 
 // Thousands of sparkles that drift like air and gather into each slide's
-// shape: the "collective" in Runtime Collective. The hero's scroll story
-// drives it: `setMorph(m)` takes m from 0 (the first slide's shape) to the
-// number of slides less one (the last), and in between the particles lift off
-// and swirl across to the next shape, then settle into it.
-export default function ParticleScene({ apiRef, slides, onReady, morphAt }) {
+// shape: the "collective" in Runtime Collective. When the hero changes slide
+// (`setSlide(index)`), the particles lift off, swirl and settle into the new
+// slide's shape by themselves.
+export default function ParticleScene({ apiRef, slides, onReady, slideAt }) {
   const mountRef = useRef(null);
   const slidesRef = useRef(slides);
   slidesRef.current = slides;
   const handlers = useRef({});
-  handlers.current = { onReady, morphAt };
+  handlers.current = { onReady, slideAt };
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -246,47 +245,110 @@ export default function ParticleScene({ apiRef, slides, onReady, morphAt }) {
         }
       };
 
-      // --- Which shape the particles are between -------------------------------
-      // `segment` is the pair of formations on show: from segment to segment+1
-      // (or, in the intro, from the scattered cloud to the first).
-      let segment = -2;
-      const useSegment = (s) => {
-        if (s === segment) return;
-        segment = s;
-        if (s === -1) {
+      // --- Changing shape --------------------------------------------------------
+      // Copies where every particle is right now into `from`, so a new morph
+      // can start mid-flight without a jump. Mirrors the vertex shader.
+      const freeze = () => {
+        const m = uniforms.uMorph.value;
+        if (m >= 1) {
+          from.set(to);
+          dataFrom.set(dataTo);
+          uniforms.uSpinFrom.value = uniforms.uSpinTo.value;
+          return;
+        }
+        const t = uniforms.uTime.value;
+        const cf = Math.cos(t * uniforms.uSpinFrom.value);
+        const sf = Math.sin(t * uniforms.uSpinFrom.value);
+        const ct = Math.cos(t * uniforms.uSpinTo.value);
+        const st = Math.sin(t * uniforms.uSpinTo.value);
+        for (let i = 0; i < count; i += 1) {
+          const local = Math.min(1, Math.max(0, (m - seeds[i * 4 + 2] * 0.45) / 0.55));
+          const e = easeInOutCubic(local);
+          const flight = Math.sin(Math.PI * local);
+          const j = i * 3;
+          const ax = cf * from[j] + sf * from[j + 2];
+          const az = cf * from[j + 2] - sf * from[j];
+          const bx = ct * to[j] + st * to[j + 2];
+          const bz = ct * to[j + 2] - st * to[j];
+          const grow = 1 + 0.2 * flight;
+          const x = (ax + (bx - ax) * e) * grow;
+          const z = (az + (bz - az) * e) * grow;
+          const swirl = flight * uniforms.uSwirl.value * (0.6 + 0.8 * seeds[i * 4 + 1]);
+          const drift = flight * uniforms.uScatter.value;
+          from[j + 1] = (from[j + 1] + (to[j + 1] - from[j + 1]) * e) * grow + scatter[j + 1] * drift;
+          from[j] = Math.cos(swirl) * x + Math.sin(swirl) * z + scatter[j] * drift;
+          from[j + 2] = Math.cos(swirl) * z - Math.sin(swirl) * x + scatter[j + 2] * drift;
+          dataFrom[i * 2] += (dataTo[i * 2] - dataFrom[i * 2]) * e;
+          dataFrom[i * 2 + 1] += (dataTo[i * 2 + 1] - dataFrom[i * 2 + 1]) * e;
+        }
+        uniforms.uSpinFrom.value = 0;
+      };
+
+      // The two tweens that run in the loop: the flight between shapes, and
+      // the blend of the colours.
+      let morphT = 1;
+      let morphDuration = MORPH_SECONDS;
+      let blendT = 1;
+      const colours = { fromTop: new THREE.Color(), fromBottom: new THREE.Color(), toTop: tops[0], toBottom: bottoms[0] };
+      let current = -1;
+
+      const morphTo = (index, { intro = false } = {}) => {
+        if (index === current) return;
+        current = index;
+        const shape = shapes[index];
+        if (intro) {
           from.set(scatteredCloud(count, rand));
           for (let i = 0; i < count; i += 1) dataFrom.set([rand(), 0], i * 2);
-          to.set(shapes[0].positions);
-          dataTo.set(shapes[0].data);
           uniforms.uSpinFrom.value = 0;
-          uniforms.uSpinTo.value = spins[0];
         } else {
-          const next = Math.min(s + 1, n - 1);
-          from.set(shapes[s].positions);
-          dataFrom.set(shapes[s].data);
-          to.set(shapes[next].positions);
-          dataTo.set(shapes[next].data);
-          uniforms.uSpinFrom.value = spins[s];
-          uniforms.uSpinTo.value = spins[next];
+          freeze();
         }
+        to.set(shape.positions);
+        dataTo.set(shape.data);
         moving.forEach((attribute) => {
           attribute.needsUpdate = true;
         });
+        uniforms.uSpinTo.value = spins[index];
+        colours.toTop = tops[index];
+        colours.toBottom = bottoms[index];
+        if (reduced) {
+          uniforms.uMorph.value = 1;
+          uniforms.uColorTop.value.copy(tops[index]);
+          uniforms.uColorBottom.value.copy(bottoms[index]);
+          render();
+          return;
+        }
+        colours.fromTop.copy(intro ? tops[index] : uniforms.uColorTop.value);
+        colours.fromBottom.copy(intro ? bottoms[index] : uniforms.uColorBottom.value);
+        uniforms.uMorph.value = 0;
+        morphT = 0;
+        morphDuration = intro ? INTRO_SECONDS : MORPH_SECONDS;
+        blendT = intro ? 1 : 0;
+        if (intro) {
+          uniforms.uColorTop.value.copy(tops[index]);
+          uniforms.uColorBottom.value.copy(bottoms[index]);
+        }
       };
 
-      // Where the story has got to (0 to n - 1), shown once the intro is done.
-      let target = 0;
-      const applyMorph = (m) => {
-        const clamped = Math.min(Math.max(m, 0), n - 1);
-        const s = Math.min(Math.floor(clamped), Math.max(n - 2, 0));
-        const t = n > 1 ? clamped - s : 1;
-        useSegment(s);
-        uniforms.uMorph.value = n > 1 ? t : 1;
-        // The colours blend across the same stretch.
-        const k = smooth(t);
-        const next = Math.min(s + 1, n - 1);
-        uniforms.uColorTop.value.lerpColors(tops[s], tops[next], k);
-        uniforms.uColorBottom.value.lerpColors(bottoms[s], bottoms[next], k);
+      // Straight to a shape, with no flight (a slide the story is already on
+      // when the scene arrives, or reduced motion).
+      const showNow = (index) => {
+        current = index;
+        const shape = shapes[index];
+        from.set(shape.positions);
+        dataFrom.set(shape.data);
+        to.set(shape.positions);
+        dataTo.set(shape.data);
+        moving.forEach((attribute) => {
+          attribute.needsUpdate = true;
+        });
+        uniforms.uSpinFrom.value = spins[index];
+        uniforms.uSpinTo.value = spins[index];
+        uniforms.uMorph.value = 1;
+        uniforms.uColorTop.value.copy(tops[index]);
+        uniforms.uColorBottom.value.copy(bottoms[index]);
+        morphT = 1;
+        blendT = 1;
       };
 
       // --- Sizing --------------------------------------------------------------
@@ -320,18 +382,11 @@ export default function ParticleScene({ apiRef, slides, onReady, morphAt }) {
       let playing = !reduced;
       let last = 0;
       let elapsed = 0;
-      // The intro: the sparkles gather into the first shape from all around.
-      // (Without it when the story has already moved on, or with reduced motion.)
-      const startAt = handlers.current.morphAt?.() ?? 0;
-      let intro = reduced || startAt > 0.001 ? 1 : 0;
-      target = startAt;
-      if (intro >= 1) applyMorph(target);
-      else {
-        useSegment(-1);
-        uniforms.uMorph.value = 0;
-        uniforms.uColorTop.value.copy(tops[0]);
-        uniforms.uColorBottom.value.copy(bottoms[0]);
-      }
+      // The intro: the sparkles gather into the first shape from all around
+      // (unless the hero has already moved on, or motion is reduced).
+      const startAt = handlers.current.slideAt?.() ?? 0;
+      if (reduced || startAt > 0) showNow(startAt);
+      else morphTo(0, { intro: true });
 
       const frame = (now) => {
         const dt = Math.min((now - last) / 1000, 0.05);
@@ -344,12 +399,15 @@ export default function ParticleScene({ apiRef, slides, onReady, morphAt }) {
         pointer.x += (pointer.tx - pointer.x) * Math.min(1, ease * 2.5);
         pointer.y += (pointer.ty - pointer.y) * Math.min(1, ease * 2.5);
 
-        if (intro < 1) {
-          intro = Math.min(1, intro + dt / INTRO_SECONDS);
-          uniforms.uMorph.value = intro;
-          if (intro >= 1) applyMorph(target);
-        } else {
-          applyMorph(target);
+        if (morphT < 1) {
+          morphT = Math.min(1, morphT + dt / morphDuration);
+          uniforms.uMorph.value = morphT;
+        }
+        if (blendT < 1) {
+          blendT = Math.min(1, blendT + dt / COLOUR_SECONDS);
+          const k = easeInOutQuad(blendT);
+          uniforms.uColorTop.value.lerpColors(colours.fromTop, colours.toTop, k);
+          uniforms.uColorBottom.value.lerpColors(colours.fromBottom, colours.toBottom, k);
         }
 
         uniforms.uTime.value = elapsed;
@@ -381,14 +439,8 @@ export default function ParticleScene({ apiRef, slides, onReady, morphAt }) {
       if (reduced) render();
 
       apiRef.current = {
-        // How far the story has got (0 to the number of slides less one).
-        setMorph: (m) => {
-          target = m;
-          if (reduced && intro >= 1) {
-            applyMorph(m);
-            render();
-          }
-        },
+        // The hero changed slide: the sparkles reform into its shape.
+        setSlide: (index) => morphTo(index),
         // The pause button freezes the sparkles' drifting.
         setPlaying: (play) => {
           playing = play;
